@@ -12,18 +12,19 @@ import catboost as ctb
 import numpy as np
 import xgboost as xgb
 from immuneML.data_model.encoded_data.EncodedData import EncodedData
-from immuneML.ml_methods.ProbabilisticBinaryClassifier import \
-    ProbabilisticBinaryClassifier
+from immuneML.ml_methods.ProbabilisticBinaryClassifier import (
+    ProbabilisticBinaryClassifier,
+)
 from joblib import Parallel, delayed, parallel_backend
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import auc, roc_curve
 from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 
-from src.features import FeatureExtractor
-from src.fisher_exact import fisher_exact
-from src.repertoire import Repertoire
-from src.sequences import SequenceContainer
+from motifboost.features import FeatureExtractor
+from motifboost.fisher_exact import fisher_exact
+from motifboost.repertoire import Repertoire
+from motifboost.sequences import SequenceContainer
 
 _logger = logging.Logger(__name__)
 
@@ -71,20 +72,15 @@ class EmersonFeatureExtractor(FeatureExtractor):
             pos_missing = pos_count - pos_exist
             neg_exist = neg_d[key]
             neg_missing = neg_count - neg_exist
-            return fisher_exact_function(
-                pos_exist, pos_missing, neg_exist, neg_missing)
+            return fisher_exact_function(pos_exist, pos_missing, neg_exist, neg_missing)
 
-        ps = [fisher_exact_wrapper(x)
-              for x in tqdm(keys, desc="exact test...")]
+        ps = [fisher_exact_wrapper(x) for x in tqdm(keys, desc="exact test...")]
         features = [key for key, p in zip(keys, ps) if p < self.th]
 
         self.feature_sequences = features
-        self.feature_dict = {
-            f: idx for idx, f in enumerate(
-                self.feature_sequences)}
+        self.feature_dict = {f: idx for idx, f in enumerate(self.feature_sequences)}
         if self.save_fisher_results:
-            self.keys = SequenceContainer(
-                self.alphabets, save_memory=self.save_memory)
+            self.keys = SequenceContainer(self.alphabets, save_memory=self.save_memory)
             self.keys.bulk_append(keys)
             self.saved_ps = np.array(ps)
 
@@ -94,9 +90,7 @@ class EmersonFeatureExtractor(FeatureExtractor):
             if p < self.th:
                 features.append(key)
         self.feature_sequences = features
-        self.feature_dict = {
-            f: idx for idx, f in enumerate(
-                self.feature_sequences)}
+        self.feature_dict = {f: idx for idx, f in enumerate(self.feature_sequences)}
 
     def transform(self, repertoires: List[Repertoire]) -> List[List[int]]:
         lst = []
@@ -108,8 +102,7 @@ class EmersonFeatureExtractor(FeatureExtractor):
             lst.append(arr)
         return lst
 
-    def transform_for_immuneml(
-            self, repertoires: List[Repertoire]) -> EncodedData:
+    def transform_for_immuneml(self, repertoires: List[Repertoire]) -> EncodedData:
         lst = []
         for r in repertoires:
             pos_counts = 0
@@ -142,8 +135,7 @@ class EmersonClassifier(BaseEstimator, ClassifierMixin):
             )
         elif self.classifier_mode == "catboost":
             task_type = os.environ.get("TASK_TYPE", "GPU")
-            self.clf = ctb.CatBoostClassifier(
-                task_type=task_type, random_state=0)
+            self.clf = ctb.CatBoostClassifier(task_type=task_type, random_state=0)
         else:
             self.clf = xgb.XGBClassifier(
                 eval_metric="auc",
@@ -164,11 +156,7 @@ class EmersonClassifier(BaseEstimator, ClassifierMixin):
         else:
             # self.clf.fit(trigram_arrays, binary_targets)
             features = self.feature_extractor.transform(repertoires)
-            self.clf.fit(
-                np.array(features),
-                np.array(
-                    binary_targets,
-                    dtype=np.int64))
+            self.clf.fit(np.array(features), np.array(binary_targets, dtype=np.int64))
 
     def predict(self, repertoires: List[Repertoire]) -> List[bool]:
         print("converting data....")

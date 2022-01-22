@@ -887,8 +887,7 @@ def subsampler(
         assert len(train_df) == train_size
         assert set(train_df.sample_name) == train_size
 
-        test_df = df[[s not in train_df["sample_name"]
-                      for s in df["sample_name"]]]
+        test_df = df[[s not in train_df["sample_name"] for s in df["sample_name"]]]
         test_positive_df = test_df[test_df["status"]]
         test_negative_df = test_df[test_df["status"] == False]
         test_positive_size = int(positive_rate * test_size)
@@ -899,8 +898,7 @@ def subsampler(
         test_negative_subsampled_df = test_negative_df.sample(
             test_negative_size, replace=False, random_state=random_seed
         )
-        test_df = pd.concat([test_positive_subsampled_df,
-                            test_negative_subsampled_df])
+        test_df = pd.concat([test_positive_subsampled_df, test_negative_subsampled_df])
 
         assert sum(test_df["status"]) == int(positive_rate * test_size)
         assert sum(test_df["status"] == False) == test_size - int(
@@ -936,18 +934,16 @@ def subsampler(
 @click.option(
     "--save_dir", default="./data/interim/repertoires", help="Path to save dir"
 )
-@click.option("--to_dir",
-              default="./data/interim/sampled_repertoires",
-              help="Path to save dir")
-@click.option("--experiment_id", default="Emerson",
-              type=str, help="experiment_id to convert")
+@click.option(
+    "--to_dir", default="./data/interim/sampled_repertoires", help="Path to save dir"
+)
+@click.option(
+    "--experiment_id", default="Emerson", type=str, help="experiment_id to convert"
+)
 @click.option("--times", default=50, type=int, help="experiment_id to convert")
-@click.option("--train_size", default=50, type=int,
-              help="experiment_id to convert")
-@click.option("--test_size", default=100, type=int,
-              help="experiment_id to convert")
-@click.option("--test_str", default=None, type=str,
-              help="experiment_id to convert")
+@click.option("--train_size", default=50, type=int, help="experiment_id to convert")
+@click.option("--test_size", default=100, type=int, help="experiment_id to convert")
+@click.option("--test_str", default=None, type=str, help="experiment_id to convert")
 def main(
     save_dir: str,
     to_dir: str,

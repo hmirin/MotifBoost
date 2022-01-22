@@ -6,14 +6,15 @@ from typing import Any, Final, List, Literal, Optional, Tuple
 import numba
 import numpy as np
 import optuna.integration.lightgbm as lgb
+
 # import catboost as ctb
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import KFold
 from tqdm import tqdm
 
-from src.features import FeatureExtractor
-from src.repertoire import Repertoire, augment_repertoire
-from src.util import basic_void_mark, human_amino_acids
+from motifboost.features import FeatureExtractor
+from motifboost.repertoire import Repertoire, augment_repertoire
+from motifboost.util import basic_void_mark, human_amino_acids
 
 _logger = logging.getLogger(__name__)
 
@@ -38,25 +39,16 @@ class MotifFeatureExtractor(FeatureExtractor):
         self.idf = None
         self.ngram_range = ngram_range
 
-    def fit(
-            self,
-            repertoires: List[Repertoire],
-            use_cache=True,
-            save_cache=True):
+    def fit(self, repertoires: List[Repertoire], use_cache=True, save_cache=True):
         wrapper = functools.partial(
-            self._process_single,
-            use_cache=use_cache,
-            save_cache=save_cache,
-            mode="fit")
+            self._process_single, use_cache=use_cache, save_cache=save_cache, mode="fit"
+        )
         with multiprocessing.Pool(self.n_processes) as pool:
             imap = pool.imap(wrapper, repertoires)
             result = list(
-                tqdm(
-                    imap,
-                    total=len(repertoires),
-                    desc="MotifFeatureExtractor"))
-            self.idf = len(result) / \
-                np.sum([arr > 0 for arr in result], axis=0)
+                tqdm(imap, total=len(repertoires), desc="MotifFeatureExtractor")
+            )
+            self.idf = len(result) / np.sum([arr > 0 for arr in result], axis=0)
             assert len(self.idf.shape) == 1  # TODO: delete me
             assert self.idf.shape[0] == result[0].shape[0]  # TODO: delete me
             return result
@@ -76,10 +68,8 @@ class MotifFeatureExtractor(FeatureExtractor):
         with multiprocessing.Pool(self.n_processes) as pool:
             imap = pool.imap(wrapper, repertoires)
             return list(
-                tqdm(
-                    imap,
-                    total=len(repertoires),
-                    desc="MotifFeatureExtractor"))
+                tqdm(imap, total=len(repertoires), desc="MotifFeatureExtractor")
+            )
 
     def tfidf_transform(self, arr: np.ndarray) -> np.ndarray:
         arr = np.multiply(self.idf, arr)
@@ -191,14 +181,12 @@ def ngram_features(
 
 
 @numba.jit(nopython=True)
-def ngram(seq_arrs: List[np.array],
-          alphabet_size: int,
-          count_weights: np.array,
-          n_gram: int):
+def ngram(
+    seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array, n_gram: int
+):
     n = len(seq_arrs)
     arrays = np.zeros((alphabet_size ** n_gram), dtype=np.int64)
-    multiplier = np.array([alphabet_size ** (n_gram - 1 - k)
-                          for k in range(n_gram)])
+    multiplier = np.array([alphabet_size ** (n_gram - 1 - k) for k in range(n_gram)])
     for p in range(n):
         seq_arr = seq_arrs[p]
         for q in range(0, len(seq_arr) - (n_gram - 1)):
@@ -212,9 +200,7 @@ def ngram(seq_arrs: List[np.array],
 
 
 @numba.jit(nopython=True)
-def trigram(seq_arrs: List[np.array],
-            alphabet_size: int,
-            count_weights: np.array):
+def trigram(seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array):
     n = len(seq_arrs)
     arrays = np.zeros((alphabet_size ** 3), dtype=np.int64)
     for p in range(n):
@@ -249,9 +235,7 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
         if self.classifier_method == "optuna-lightgbm":
             self.clf = None
         else:
-            raise ValueError(
-                "No such clssifiermethod is available:",
-                classifier_method)
+            raise ValueError("No such clssifiermethod is available:", classifier_method)
 
         self.feature_extractor = MotifFeatureExtractor(
             alphabets=alphabets,
@@ -281,8 +265,8 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
         print("fitting....")
         if self.classifier_method == "optuna-lightgbm":
             dtrain = lgb.Dataset(
-                np.array(trigram_arrays), label=np.array(
-                    binary_targets, dtype=np.int64))
+                np.array(trigram_arrays), label=np.array(binary_targets, dtype=np.int64)
+            )
             params = {
                 "objective": "binary",
                 "metric": "binary_logloss",
@@ -323,8 +307,9 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             # simple averaging
             preds = np.array(
                 self.clf.predict(
-                    np.array(trigram_arrays),
-                    num_iteration=self.clf.best_iteration))
+                    np.array(trigram_arrays), num_iteration=self.clf.best_iteration
+                )
+            )
             means = np.mean(preds, axis=0)
             return [x > 0.5 for x in means]
         else:
@@ -340,8 +325,9 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             # simple averaging
             preds = np.array(
                 self.clf.predict(
-                    np.array(trigram_arrays),
-                    num_iteration=self.clf.best_iteration))
+                    np.array(trigram_arrays), num_iteration=self.clf.best_iteration
+                )
+            )
             means = np.mean(preds, axis=0)
             return np.array([1 - means, means]).transpose()
         elif self.classifier_method == "xgboost":
