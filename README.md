@@ -70,11 +70,4 @@ MotifBoostClassifier.predict_proba(val_repertoires, [get_class(x) for x in val_r
 
 ## Reproduction of Results in the Paper
 
-- Figure. 1, 2 and 4
-  - For N=640, you can run `src/examples/emerson-dataset-comparison.py`
-  - For other N, the same sampling procedure can be done with `scripts/emerson_subsampler.py`.
-    - Scripts will be further added for easier reproduction
-  - DeepRC must be pateched to split the data by Cohort
-    - Patches will be added to this repository 
-- Figure. 3
-  - See `papers/k-mer-feature-space-visualization.ipynb`
+- See [https://github.com/hmirin/motifboost-paper]()
