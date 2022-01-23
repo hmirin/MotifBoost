@@ -9,7 +9,7 @@ A library for robust and data-efficient classification of RepSeq data
 ```
 git clone https://github.com/hmirin/MotifBoost
 cd MotifBoost
-pip install -r requirements.txt
+pip install .
 ```
 
 ## Usage
@@ -27,9 +27,9 @@ pip install -r requirements.txt
 
 
 ```python
-from src.repertoire import repertoire_dataset_loader
-from src.dataset.settings import emerson_classification_cohort_split as settings
-from src.methods.motif import MotifBoostClassifier
+from motifboost.repertoire import repertoire_dataset_loader
+from motifboost.dataset.settings import emerson_classification_cohort_split as settings
+from motifboost.methods.motif import MotifBoostClassifier
 
 # Get array of Repertoire instances
 repertoires = repertoire_dataset_loader(
