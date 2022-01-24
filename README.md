@@ -20,12 +20,6 @@ pip install .
 
 ## Example 
 
-- See `examples` for detail.
-  - Emerson, et al. Nat. Genet. 2017
-  - You need to download the zip from [immuneaccess](https://clients.adaptivebiotech.com/pub/emerson-2017-natgen) and convert the data using `scripts/convert.py`.
-    - Follow the instruction in the script.
-
-
 ```python
 from motifboost.repertoire import repertoire_dataset_loader
 from motifboost.dataset.settings import emerson_classification_cohort_split as settings
