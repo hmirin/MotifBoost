@@ -58,8 +58,7 @@ def test_fast_fisher():
         for j in range(50):
             for k in range(50):
                 for l in range(50):
-                    scipy_p = scipy_fisher_exact(
-                        [[i, j], [k, l]], "greater")[1]
+                    scipy_p = scipy_fisher_exact([[i, j], [k, l]], "greater")[1]
                     my_p = fisher_exact(i, j, k, l)
                     if abs(my_p - scipy_p) > 0.0000001:
                         print("different", my_p, scipy_p, i, j, k, l)
@@ -68,8 +67,7 @@ def test_fast_fisher():
         for j in range(190, 210):
             for k in range(190, 210):
                 for l in range(190, 210):
-                    scipy_p = scipy_fisher_exact(
-                        [[i, j], [k, l]], "greater")[1]
+                    scipy_p = scipy_fisher_exact([[i, j], [k, l]], "greater")[1]
                     my_p = fisher_exact(i, j, k, l)
                     if abs(my_p - scipy_p) > 0.0000001:
                         print("different", my_p, scipy_p, i, j, k, l)
