@@ -49,8 +49,9 @@ val_repertoires = [r for r in repertoires if settings.get_split(r) == "test"]
 data_labels = [r.info["person_id"] for r in val_repertoires]
 
 # MotifBoostClassifier implements a sklearn like API.
-MotifBoostClassifier.fit(train_repertoires, [get_class(x) for x in train_repertoires])
-MotifBoostClassifier.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
+clf = MotifBoostClassifier()
+clf.fit(train_repertoires, [get_class(x) for x in train_repertoires])
+clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 ```
 
 ## Citation
