@@ -9,7 +9,7 @@ A library for robust and data-efficient classification of RepSeq data
 ```
 git clone https://github.com/hmirin/MotifBoost
 cd MotifBoost
-pip install -r requirements.txt
+pip install .
 ```
 
 ## Usage
@@ -27,9 +27,9 @@ pip install -r requirements.txt
 
 
 ```python
-from src.repertoire import repertoire_dataset_loader
-from src.dataset.settings import emerson_classification_cohort_split as settings
-from src.methods.motif import MotifBoostClassifier
+from motifboost.repertoire import repertoire_dataset_loader
+from motifboost.dataset.settings import emerson_classification_cohort_split as settings
+from motifboost.methods.motif import MotifBoostClassifier
 
 # Get array of Repertoire instances
 repertoires = repertoire_dataset_loader(
@@ -49,8 +49,9 @@ val_repertoires = [r for r in repertoires if settings.get_split(r) == "test"]
 data_labels = [r.info["person_id"] for r in val_repertoires]
 
 # MotifBoostClassifier implements a sklearn like API.
-MotifBoostClassifier.fit(train_repertoires, [get_class(x) for x in train_repertoires])
-MotifBoostClassifier.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
+clf = MotifBoostClassifier()
+clf.fit(train_repertoires, [get_class(x) for x in train_repertoires])
+clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 ```
 
 ## Citation
@@ -70,11 +71,4 @@ MotifBoostClassifier.predict_proba(val_repertoires, [get_class(x) for x in val_r
 
 ## Reproduction of Results in the Paper
 
-- Figure. 1, 2 and 4
-  - For N=640, you can run `src/examples/emerson-dataset-comparison.py`
-  - For other N, the same sampling procedure can be done with `scripts/emerson_subsampler.py`.
-    - Scripts will be further added for easier reproduction
-  - DeepRC must be pateched to split the data by Cohort
-    - Patches will be added to this repository 
-- Figure. 3
-  - See `papers/k-mer-feature-space-visualization.ipynb`
+- See [https://github.com/hmirin/motifboost-paper]()

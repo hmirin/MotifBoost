@@ -14,8 +14,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-from src.sequences import SequenceContainer
-from src.util import human_amino_acids
+from motifboost.sequences import SequenceContainer
+from motifboost.util import human_amino_acids
 
 
 class Repertoire(object):
@@ -40,12 +40,7 @@ class Repertoire(object):
         self.features: Dict[str, Any] = {}
 
     def save(self, save_dir: str):
-        path = pathlib.Path(
-            save_dir +
-            "/" +
-            self.experiment_id +
-            "/" +
-            self.sample_id)
+        path = pathlib.Path(save_dir + "/" + self.experiment_id + "/" + self.sample_id)
         path.mkdir(parents=True, exist_ok=True)
         seq_path = path / "sequence_data.feather"
         pd.DataFrame.from_dict(
@@ -66,12 +61,8 @@ class Repertoire(object):
         with open(path / "info.pkl", "rb") as f:
             info = cloudpickle.load(f)
         return Repertoire(
-            experiment_id,
-            sample_id,
-            info,
-            sequences,
-            counts,
-            save_memory=save_memory)
+            experiment_id, sample_id, info, sequences, counts, save_memory=save_memory
+        )
 
 
 def load_repertoire_wrapper(
@@ -111,13 +102,10 @@ def repertoire_dataset_loader(
         with multiprocessing.Pool(n_processes) as pool:
             imap = pool.imap(wrapper, sample_ids)
             results = list(
-                tqdm(
-                    imap,
-                    total=len(sample_ids),
-                    desc="RepertoireLoader_Multi"))
+                tqdm(imap, total=len(sample_ids), desc="RepertoireLoader_Multi")
+            )
     else:
-        results = list(
-            map(wrapper, tqdm(sample_ids, desc="RepertoireLoader_Single")))
+        results = list(map(wrapper, tqdm(sample_ids, desc="RepertoireLoader_Single")))
     if filter_by_repertoire is not None:
         results = [x for x in results if filter_by_repertoire(x)]
     # for r in results:
@@ -132,10 +120,8 @@ def repertoire_dataset_loader(
 
 
 def augment_repertoire(
-        repertoires: List[Repertoire],
-        n: int,
-        method="subsample",
-        subsample_size=0.25) -> List[Repertoire]:
+    repertoires: List[Repertoire], n: int, method="subsample", subsample_size=0.25
+) -> List[Repertoire]:
     data = []
     idx = 0
     while True:
@@ -147,8 +133,11 @@ def augment_repertoire(
         idx += 1
     augment_simple_wrapper = functools.partial(augment_simple, subsample_size)
 
-    return list(Parallel(n_jobs=-1)(delayed(augment_simple_wrapper)(r=x)
-                                    for x in tqdm(data, desc="Augmenter")))
+    return list(
+        Parallel(n_jobs=-1)(
+            delayed(augment_simple_wrapper)(r=x) for x in tqdm(data, desc="Augmenter")
+        )
+    )
 
 
 @numba.njit()

@@ -9,8 +9,7 @@ class PackedStringArray:
         assert all([len(ch) == 1 for ch in alphabets])
         self.alphabets: Final[List[str]] = alphabets
         self.alphabet_size: Final[int] = len(self.alphabets)
-        self.char_bit_size: Final[int] = int(
-            np.ceil(np.log2(self.alphabet_size)))
+        self.char_bit_size: Final[int] = int(np.ceil(np.log2(self.alphabet_size)))
         self.dictionary: Final[Dict[str, bitarray]] = {
             ch: bitarray(bin(idx)[2:].zfill(self.char_bit_size))
             for idx, ch in enumerate(alphabets)
@@ -23,9 +22,9 @@ class PackedStringArray:
 
     def __getbytes__(self, idx) -> bitarray:
         if idx + 1 == len(self.indices):
-            word = self.data[self.indices[idx]:]
+            word = self.data[self.indices[idx] :]
         else:
-            word = self.data[self.indices[idx]: self.indices[idx + 1]]
+            word = self.data[self.indices[idx] : self.indices[idx + 1]]
         return word
 
     def __getitem__(self, idx) -> str:

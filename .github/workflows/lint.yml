@@ -1,0 +1,48 @@
+name: lint
+
+on:
+  push
+
+jobs:
+  linter:
+    name: Run linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 
+
+      - name: Python linters
+        shell: bash
+        run: |
+          pip install isort autoflake black
+          isort --force-single-line-imports .
+          autoflake -ri --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables .
+          black .
+          isort -m 3 --trailing-comma .
+
+      - name: Commit files
+        run: |
+            /usr/bin/git config --local user.email "action@github.com"
+            /usr/bin/git config --local user.name "GitHub Action"
+            /usr/bin/git add -A && /usr/bin/git diff-index --cached --quiet HEAD || /usr/bin/git commit -m 'python linting'
+
+      - name: Push changes (not PR)
+        if: github.event_name != 'pull_request'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: ${{ github.ref }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push changes (PR)
+        if: github.event_name == 'pull_request'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: refs/heads/${{ github.head_ref }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

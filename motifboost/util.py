@@ -44,8 +44,7 @@ def summarize_metrics(
     print(matrix)
     tn, fp, fn, tp = matrix.ravel()
     print("prec:", tp / (tp + fp), "recall:", tp / (tp + fn))
-    fpr, tpr, _ = roc_curve(
-        ground_truth_class, predicted_proba, sample_weight=weighted)
+    fpr, tpr, _ = roc_curve(ground_truth_class, predicted_proba, sample_weight=weighted)
     print(ground_truth_class)
     print(predicted_proba)
     roc_auc = auc(fpr, tpr)
@@ -53,12 +52,8 @@ def summarize_metrics(
     lw = 2
     plt.clf()
     plt.plot(
-        fpr,
-        tpr,
-        color="darkorange",
-        lw=lw,
-        label="ROC curve (area = %0.2f)" %
-        roc_auc)
+        fpr, tpr, color="darkorange", lw=lw, label="ROC curve (area = %0.2f)" % roc_auc
+    )
     plt.plot([0, 1], [0, 1], color="navy", lw=lw, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -83,8 +78,7 @@ def summarize_metrics(
     with mlflow.start_run(run_name=prefix):
         mlflow.log_artifact(save_fig_path)
         mlflow.log_artifact(excel_path)
-        mlflow.log_metrics({"tp": tp, "fn": fn, "fp": fp,
-                           "tn": tn, "roc_auc": roc_auc})
+        mlflow.log_metrics({"tp": tp, "fn": fn, "fp": fp, "tn": tn, "roc_auc": roc_auc})
     return roc_auc
 
 
