@@ -8,7 +8,7 @@ from functools import lru_cache
 from multiprocessing import current_process, shared_memory
 from typing import Callable, DefaultDict, Dict, List, Literal, Optional, Set
 
-# import catboost as ctb
+import catboost as ctb
 import numpy as np
 import xgboost as xgb
 from immuneML.data_model.encoded_data.EncodedData import EncodedData
