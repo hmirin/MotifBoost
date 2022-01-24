@@ -1,12 +1,8 @@
 import logging
-import math
-import multiprocessing
 import os
 import sys
 from collections import defaultdict
-from functools import lru_cache
-from multiprocessing import current_process, shared_memory
-from typing import Callable, DefaultDict, Dict, List, Literal, Optional, Set
+from typing import Callable, DefaultDict, Dict, List, Literal, Optional
 
 # import catboost as ctb
 import numpy as np
@@ -351,7 +347,7 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
         return pred_class
 
     def predict_proba(self, repertoires: List[Repertoire]) -> np.ndarray:
-        features = self.feature_extractor.transform(repertoires)
+        self.feature_extractor.transform(repertoires)
         enc = self.feature_extractor.transform_for_immuneml(repertoires)
         pred_proba = self.clf.predict_proba(enc, "feature")
         return pred_proba["feature"]

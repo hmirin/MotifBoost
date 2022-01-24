@@ -1,9 +1,6 @@
 import logging
-from abc import ABCMeta
-from abc import abstractmethod
-from typing import Any
-from typing import List
-from typing import TypeVar
+from abc import ABCMeta, abstractmethod
+from typing import Any, List, TypeVar
 
 from motifboost.repertoire import Repertoire
 

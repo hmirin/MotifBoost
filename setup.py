@@ -29,7 +29,7 @@ setuptools.setup(
         "pyarrow",
         "catboost",
         "xgboost",
-        "optuna"
+        "optuna",
     ],
     extras_require={"dev": ["nose", "coverage", "black", "isort", "numpy"]},
     zip_safe=False,
