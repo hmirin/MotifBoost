@@ -65,4 +65,4 @@ clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 
 ## Reproducing the results of the paper
 
-- See [https://github.com/hmirin/motifboost-paper]()
+- See [https://github.com/hmirin/motifboost-paper](https://github.com/hmirin/motifboost-paper)
