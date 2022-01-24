@@ -18,7 +18,7 @@ pip install .
   - ```Repertoire``` provides the repertoire dataset class
   - ```MotifBoostClassifier``` provies a scikit-learn like interface for our robust and data-efficient repertoire classification method.
 
-## Example 
+## Example x
 
 ```python
 from motifboost.repertoire import repertoire_dataset_loader
@@ -63,6 +63,6 @@ clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 }
 ```
 
-## Reproduction of Results in the Paper
+## Reproducing the results of the paper
 
 - See [https://github.com/hmirin/motifboost-paper]()
