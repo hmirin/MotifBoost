@@ -10,7 +10,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     author="hmirin",
     url="http://github.com/hmirin/MotifBoost",
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     py_modules=[PACKAGE_NAME],
     install_requires=[
         "click>=7",
