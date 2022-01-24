@@ -21,6 +21,7 @@ jobs:
       - name: Python linters
         shell: bash
         run: |
+          pip install isort autoflake black
           isort --force-single-line-imports .
           autoflake -ri --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables .
           black .
