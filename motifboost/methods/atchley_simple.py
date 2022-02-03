@@ -1,25 +1,20 @@
 # Taken from https://academic.oup.com/bioinformatics/article/30/22/3181/2390867
 
+import collections
 import functools
 import multiprocessing
-import os, random, string, time, math
-from typing import Dict, List, Set
-import numpy as np
-import collections
-from sklearn import svm
-from sklearn.cluster import KMeans
+import random
+from typing import List, Set
+
 import numba
-
-from motifboost.repertoire import Repertoire
-
-from motifboost.methods.motif import ngram_features
+import numpy as np
+from sklearn import svm
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.cluster import KMeans
+from tqdm import tqdm
 
 from motifboost.features import FeatureExtractor
-
-from motifboost.repertoire import repertoire_dataset_loader
-
-from sklearn.base import BaseEstimator, ClassifierMixin
-from tqdm import tqdm
+from motifboost.repertoire import Repertoire, repertoire_dataset_loader
 
 q = 10000
 p = 3
@@ -137,14 +132,18 @@ def seqs2historgam(
             dist = (codewords_atchely - v) ** 2
             dist = np.sum(dist, axis=1)
             ind = np.argmin(dist)
-            cluster[ind ]
+            cluster[ind]
             histogram[cluster[ind]] += 1
             count += 1
     return histogram
 
+
 # caching
 atchley_factor("ADC")
-seqs2historgam(1, np.zeros((1,p*5),dtype=np.int64), np.zeros(1,dtype=np.int64), ["ADCA"])
+seqs2historgam(
+    1, np.zeros((1, p * 5), dtype=np.int64), np.zeros(1, dtype=np.int64), ["ADCA"]
+)
+
 
 def seqs2historgam_wrapper(
     something,
@@ -169,7 +168,7 @@ def repertoire2vector(
         cluster=cluster,
         seqs=repertoire.sequences.get_all(),
     )
-    seqs = repertoire.sequences.get_all()
+    repertoire.sequences.get_all()
     with multiprocessing.Pool(6) as pool:
         imap = pool.imap(wrapper, range(n_augmentation))
         result = list(tqdm(imap, total=n_augmentation, desc="Augmentation"))
@@ -182,7 +181,6 @@ class AtchleySimpleEncoder(FeatureExtractor):
     ):
         self.codeword2cluster = None
         self.codewords_atchely = None
-        pass
 
     def fit(self, repertoires: List[Repertoire]):
         # check codewords
