@@ -16,9 +16,6 @@ from tqdm import tqdm
 from motifboost.features import FeatureExtractor
 from motifboost.repertoire import Repertoire, repertoire_dataset_loader
 
-q = 10000
-p = 3
-n_codewords = 100
 
 aa = collections.defaultdict(int)
 aa["A"] = 0
@@ -89,13 +86,7 @@ def atchley_factor(x: str) -> np.ndarray:
             [-0.032, 0.326, 2.213, 0.908, 1.313],
             [-1.337, -0.279, -0.544, 1.242, -1.262],
             [-0.595, 0.009, 0.672, 2.128, -0.184],
-            [
-                0.260,
-                0.830,
-                3.097,
-                -0.838,
-                1.512,
-            ],
+            [0.260, 0.830, 3.097, -0.838, 1.512,],
         ]
     )
 
@@ -117,17 +108,22 @@ def repertoire_to_ngram(repertoire: Repertoire, ngram: int) -> Set[str]:
 
 # @numba.jit()
 def seqs2historgam(
-    size: int, codewords_atchely: np.ndarray, cluster: np.ndarray, seqs: List[str]
+    size: int,
+    n_gram: int,
+    n_subsample: int,
+    codewords_atchely: np.ndarray,
+    cluster: np.ndarray,
+    seqs: List[str],
 ):
     histogram = np.zeros(size)
     count = 0
-    while count < q:
+    while count < n_subsample:
         pickseq = random.randint(0, len(seqs) - 1)
         m = len(seqs[pickseq])
-        if m > p:
+        if m > n_gram:
             # start of p-mer must be located p steps from end
-            picktriplet = random.randint(0, m - p)
-            x = seqs[pickseq][picktriplet : picktriplet + p]
+            picktriplet = random.randint(0, m - n_gram)
+            x = seqs[pickseq][picktriplet : picktriplet + n_gram]
             v = atchley_factor(x)
             dist = (codewords_atchely - v) ** 2
             dist = np.sum(dist, axis=1)
@@ -141,53 +137,68 @@ def seqs2historgam(
 # caching
 atchley_factor("ADC")
 seqs2historgam(
-    1, np.zeros((1, p * 5), dtype=np.int64), np.zeros(1, dtype=np.int64), ["ADCA"]
+    1,
+    3,
+    100,
+    np.zeros((1, 3 * 5), dtype=np.int64),
+    np.zeros(1, dtype=np.int64),
+    ["ADCA"],
 )
 
 
 def seqs2historgam_wrapper(
     something,
     size: int,
+    n_gram: int,
+    n_subsample: int,
     codewords_atchely: np.ndarray,
     cluster: np.ndarray,
     seqs: List[str],
 ):
-    return seqs2historgam(size, codewords_atchely, cluster, seqs)
+    return seqs2historgam(size, n_gram, n_subsample, codewords_atchely, cluster, seqs)
 
 
 def repertoire2vector(
     repertoire: Repertoire,
     codewords_atchely: np.ndarray,
     cluster: np.ndarray,
+    n_gram:int,
+    n_subsample: int,
+    n_codewords: int,
     n_augmentation=100,
 ):
     wrapper = functools.partial(
         seqs2historgam_wrapper,
         size=n_codewords,
+        n_gram=n_gram,
+        n_subsample=n_subsample,
         codewords_atchely=codewords_atchely,
         cluster=cluster,
         seqs=repertoire.sequences.get_all(),
     )
     repertoire.sequences.get_all()
-    with multiprocessing.Pool(6) as pool:
+    with multiprocessing.Pool(10) as pool:
         imap = pool.imap(wrapper, range(n_augmentation))
         result = list(tqdm(imap, total=n_augmentation, desc="Augmentation"))
         return result
 
 
 class AtchleySimpleEncoder(FeatureExtractor):
-    def __init__(
-        self,
-    ):
+    def __init__(self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100):
         self.codeword2cluster = None
         self.codewords_atchely = None
+        self.n_gram = n_gram
+        self.n_subsample = n_subsample
+        self.n_codewords = n_codewords
+        self.n_augmentation = n_augmentation
 
     def fit(self, repertoires: List[Repertoire]):
         # check codewords
-        wrapper = functools.partial(repertoire_to_ngram, ngram=p)
-        with multiprocessing.Pool(6) as pool:
+        wrapper = functools.partial(repertoire_to_ngram, ngram=self.n_gram)
+        with multiprocessing.Pool(10) as pool:
             imap = pool.imap(wrapper, repertoires)
             result = list(tqdm(imap, total=len(repertoires), desc="Ngram"))
+        # result = [wrapper(repertoire) for repertoire in tqdm(repertoires,desc="Ngram")]
         codewords = set.union(*result, set())
         codewords_atchely = [atchley_factor(x) for x in codewords]
         self.codewords = codewords
@@ -195,24 +206,30 @@ class AtchleySimpleEncoder(FeatureExtractor):
 
         # codewords to cluster
         print("training KMeans...")
-        kmeans = KMeans(n_clusters=n_codewords, random_state=0).fit(codewords_atchely)
+        kmeans = KMeans(n_clusters=self.n_codewords).fit(
+            codewords_atchely
+        )
         codeword2cluster = {w: l for w, l in zip(codewords, kmeans.labels_)}
         self.cluster = kmeans.labels_
         self.codeword2cluster = codeword2cluster
 
     def transform(self, repertoires: List[Repertoire]) -> List[List[np.ndarray]]:
         return [
-            repertoire2vector(r, self.codewords_atchely, self.cluster)
+            repertoire2vector(
+                r, self.codewords_atchely, self.cluster, self.n_gram, self.n_subsample, self.n_codewords
+            )
             for r in tqdm(repertoires, desc="Transforming")
         ]
 
 
 class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(
-        self,
-    ):
-        self.feature_extractor = AtchleySimpleEncoder()
-        self.clf = svm.SVC()
+    def __init__(self,n_gram:int,n_subsample:int,n_codewords:int=100,n_augmentation:int=100):
+        self.n_gram = n_gram
+        self.n_subsample = n_subsample
+        self.n_codewords = n_codewords
+        self.n_augmentation = n_augmentation
+        self.feature_extractor = AtchleySimpleEncoder(n_gram,n_subsample,n_codewords,n_augmentation)
+        self.clf = svm.SVC(probability=True)
 
     def fit(self, repertoires: List[Repertoire], binary_targets: List[bool]):
         print("training extractor....")
@@ -231,111 +248,109 @@ class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
         features = [
             np.mean(x, axis=0) for x in self.feature_extractor.transform(repertoires)
         ]
-        pred_class = self.clf.predict(np.array(features))
+        pred_class = self.clf.predict_proba(np.array(features))[:, 1] > 0.5
         return pred_class
 
     def predict_proba(self, repertoires: List[Repertoire]) -> np.ndarray:
         print("converting data....")
-        features = self.feature_extractor.transform(repertoires)
+        features = [
+            np.mean(x, axis=0) for x in self.feature_extractor.transform(repertoires)
+        ]
         pred_proba = self.clf.predict_proba(np.array(features))
         return pred_proba
 
 
-from dataclasses import dataclass
-from typing import Callable, Literal, Optional
+# from dataclasses import dataclass
+# from typing import Callable, Literal, Optional
 
-from motifboost.repertoire import Repertoire
-
-
-@dataclass()
-class DatasetSettings:
-    experiment_id: str
-    get_class: Callable[[Repertoire], bool]
-    filter_by_sample_id: Optional[Callable[[str], bool]]
-    filter_by_repertoire: Optional[Callable[[Repertoire], bool]]
-    get_split: Optional[
-        Callable[[Repertoire], Literal["train", "test", "other"]]
-    ] = None
+# from motifboost.repertoire import Repertoire
 
 
-def huth_get_class(r: Repertoire) -> bool:
-    return bool(r.info["cmv"])
+# @dataclass()
+# class DatasetSettings:
+#     experiment_id: str
+#     get_class: Callable[[Repertoire], bool]
+#     filter_by_sample_id: Optional[Callable[[str], bool]]
+#     filter_by_repertoire: Optional[Callable[[Repertoire], bool]]
+#     get_split: Optional[
+#         Callable[[Repertoire], Literal["train", "test", "other"]]
+#     ] = None
 
 
-def huth_filter_by_sample_id(sample_id: str) -> bool:
-    return "all" in sample_id
+# def huth_get_class(r: Repertoire) -> bool:
+#     return bool(r.info["cmv"])
 
 
-huth_classification = DatasetSettings(
-    "Huth", huth_get_class, huth_filter_by_sample_id, None
-)
+# def huth_filter_by_sample_id(sample_id: str) -> bool:
+#     return "all" in sample_id
 
 
-def heather_get_class(r: Repertoire) -> bool:
-    return bool(r.info["HIV"])
+# huth_classification = DatasetSettings(
+#     "Huth", huth_get_class, huth_filter_by_sample_id, None
+# )
 
 
-def heather_filter_by_sample_id_alpha(sample_id: str) -> bool:
-    return "alpha" in sample_id
+# def heather_get_class(r: Repertoire) -> bool:
+#     return bool(r.info["HIV"])
 
 
-def heather_filter_by_sample_id_beta(sample_id: str) -> bool:
-    return "beta" in sample_id
+# def heather_filter_by_sample_id_alpha(sample_id: str) -> bool:
+#     return "alpha" in sample_id
 
 
-def heather_filter_by_repertoire(r: Repertoire) -> bool:
-    return not r.info["treated"]
+# def heather_filter_by_sample_id_beta(sample_id: str) -> bool:
+#     return "beta" in sample_id
 
 
-heather_classification_alpha = DatasetSettings(
-    "Heather",
-    heather_get_class,
-    heather_filter_by_sample_id_alpha,
-    heather_filter_by_repertoire,
-)
-
-heather_classification_beta = DatasetSettings(
-    "Heather",
-    heather_get_class,
-    heather_filter_by_sample_id_beta,
-    heather_filter_by_repertoire,
-)
+# def heather_filter_by_repertoire(r: Repertoire) -> bool:
+#     return not r.info["treated"]
 
 
-def emerson_get_class(r: Repertoire) -> bool:
-    return bool(r.info["CMV"])
+# heather_classification_alpha = DatasetSettings(
+#     "Heather",
+#     heather_get_class,
+#     heather_filter_by_sample_id_alpha,
+#     heather_filter_by_repertoire,
+# )
+
+# heather_classification_beta = DatasetSettings(
+#     "Heather",
+#     heather_get_class,
+#     heather_filter_by_sample_id_beta,
+#     heather_filter_by_repertoire,
+# )
 
 
-def emerson_cohort_get_split(r: Repertoire) -> Literal["train", "test", "other"]:
-    if "HIP" in r.sample_id:
-        return "train"
-    elif "Keck" in r.sample_id:
-        return "test"
-    else:
-        print("unknown sample_id:", r.sample_id)
-        return "other"
+# def emerson_get_class(r: Repertoire) -> bool:
+#     return bool(r.info["CMV"])
 
 
-emerson_classification_cohort_split = DatasetSettings(
-    "Emerson",
-    emerson_get_class,
-    None,
-    None,
-    emerson_cohort_get_split,
-)
+# def emerson_cohort_get_split(r: Repertoire) -> Literal["train", "test", "other"]:
+#     if "HIP" in r.sample_id:
+#         return "train"
+#     elif "Keck" in r.sample_id:
+#         return "test"
+#     else:
+#         print("unknown sample_id:", r.sample_id)
+#         return "other"
 
 
-repertoires = repertoire_dataset_loader(
-    "./data/preprocessed/",
-    "Huth",
-    huth_classification.filter_by_sample_id,
-    huth_classification.filter_by_repertoire,
-    multiprocess_mode=True,
-    save_memory=True,  # for emerson full
-)
+# emerson_classification_cohort_split = DatasetSettings(
+#     "Emerson", emerson_get_class, None, None, emerson_cohort_get_split,
+# )
 
-sac = AtchleySimpleClassifier()
-sac.fit(repertoires, [huth_classification.get_class(r) for r in repertoires])
-from IPython import embed
 
-embed()
+# repertoires = repertoire_dataset_loader(
+#     "./data/preprocessed/",
+#     "Huth",
+#     huth_classification.filter_by_sample_id,
+#     huth_classification.filter_by_repertoire,
+#     multiprocess_mode=True,
+#     save_memory=True,  # for emerson full
+# )
+
+# sac = AtchleySimpleClassifier(n_gram=3,n_subsample=10000,n_codewords=100,n_augmentation=100)
+# sac.fit(repertoires, [huth_classification.get_class(r) for r in repertoires])
+# from IPython import embed
+
+# embed()
