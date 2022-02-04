@@ -14,8 +14,7 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 from motifboost.features import FeatureExtractor
-from motifboost.repertoire import Repertoire, repertoire_dataset_loader
-
+from motifboost.repertoire import Repertoire
 
 aa = collections.defaultdict(int)
 aa["A"] = 0
@@ -86,7 +85,13 @@ def atchley_factor(x: str) -> np.ndarray:
             [-0.032, 0.326, 2.213, 0.908, 1.313],
             [-1.337, -0.279, -0.544, 1.242, -1.262],
             [-0.595, 0.009, 0.672, 2.128, -0.184],
-            [0.260, 0.830, 3.097, -0.838, 1.512,],
+            [
+                0.260,
+                0.830,
+                3.097,
+                -0.838,
+                1.512,
+            ],
         ]
     )
 
@@ -162,7 +167,7 @@ def repertoire2vector(
     repertoire: Repertoire,
     codewords_atchely: np.ndarray,
     cluster: np.ndarray,
-    n_gram:int,
+    n_gram: int,
     n_subsample: int,
     n_codewords: int,
     n_augmentation=100,
@@ -184,7 +189,9 @@ def repertoire2vector(
 
 
 class AtchleySimpleEncoder(FeatureExtractor):
-    def __init__(self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100):
+    def __init__(
+        self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100
+    ):
         self.codeword2cluster = None
         self.codewords_atchely = None
         self.n_gram = n_gram
@@ -206,9 +213,7 @@ class AtchleySimpleEncoder(FeatureExtractor):
 
         # codewords to cluster
         print("training KMeans...")
-        kmeans = KMeans(n_clusters=self.n_codewords).fit(
-            codewords_atchely
-        )
+        kmeans = KMeans(n_clusters=self.n_codewords).fit(codewords_atchely)
         codeword2cluster = {w: l for w, l in zip(codewords, kmeans.labels_)}
         self.cluster = kmeans.labels_
         self.codeword2cluster = codeword2cluster
@@ -216,19 +221,32 @@ class AtchleySimpleEncoder(FeatureExtractor):
     def transform(self, repertoires: List[Repertoire]) -> List[List[np.ndarray]]:
         return [
             repertoire2vector(
-                r, self.codewords_atchely, self.cluster, self.n_gram, self.n_subsample, self.n_codewords
+                r,
+                self.codewords_atchely,
+                self.cluster,
+                self.n_gram,
+                self.n_subsample,
+                self.n_codewords,
             )
             for r in tqdm(repertoires, desc="Transforming")
         ]
 
 
 class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self,n_gram:int,n_subsample:int,n_codewords:int=100,n_augmentation:int=100):
+    def __init__(
+        self,
+        n_gram: int,
+        n_subsample: int,
+        n_codewords: int = 100,
+        n_augmentation: int = 100,
+    ):
         self.n_gram = n_gram
         self.n_subsample = n_subsample
         self.n_codewords = n_codewords
         self.n_augmentation = n_augmentation
-        self.feature_extractor = AtchleySimpleEncoder(n_gram,n_subsample,n_codewords,n_augmentation)
+        self.feature_extractor = AtchleySimpleEncoder(
+            n_gram, n_subsample, n_codewords, n_augmentation
+        )
         self.clf = svm.SVC(probability=True)
 
     def fit(self, repertoires: List[Repertoire], binary_targets: List[bool]):
