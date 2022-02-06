@@ -1,54 +1,32 @@
 # https://cancerres.aacrjournals.org/content/79/7/1671.long
+import datetime
 import functools
-import logging
 import multiprocessing
+import shutil
+import tempfile
 from pathlib import Path
 from typing import List
-import tempfile
+
+import pandas as pd
 from immuneML.data_model.dataset import RepertoireDataset
-
-from motifboost.repertoire import repertoire_dataset_loader, Repertoire
-import pandas as pd
-from tqdm import tqdm
-from dataset import huth_classification
-import immuneML.data_model.repertoire.Repertoire as immumeml_repertoire
-
-from immuneML.encodings.EncoderParams import EncoderParams
-
-from immuneML.environment.LabelConfiguration import LabelConfiguration
-
-from immuneML.environment.Label import Label
-
-from immuneML.ml_methods.AtchleyKmerMILClassifier import (
-    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML,
-)
-from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import (
-    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML,
-)
-
-import airr
-import pandas as pd
-
-from immuneML.IO.dataset_import.DataImport import DataImport
-from immuneML.IO.dataset_import.DatasetImportParams import DatasetImportParams
-from immuneML.data_model.dataset.Dataset import Dataset
-from immuneML.data_model.receptor.ChainPair import ChainPair
-from immuneML.data_model.receptor.RegionType import RegionType
-from immuneML.data_model.receptor.receptor_sequence.SequenceFrameType import (
-    SequenceFrameType,
-)
 from immuneML.data_model.repertoire.Repertoire import Repertoire
-from immuneML.util.ImportHelper import ImportHelper
-from scripts.specification_util import update_docs_per_mapping
+from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
+    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
+from immuneML.encodings.EncoderParams import EncoderParams
+from immuneML.environment.Label import Label
+from immuneML.environment.LabelConfiguration import LabelConfiguration
 from immuneML.IO.dataset_import import AIRRImport
+from immuneML.ml_methods.AtchleyKmerMILClassifier import \
+    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
 from sklearn.base import BaseEstimator, ClassifierMixin
-import shutil
+from tqdm import tqdm
 
-import datetime
+from motifboost.repertoire import Repertoire
 
 # from logging import getLogger
 # logger = getLogger(__name__)
 # logger.setLevel(logging.INFO)
+
 
 class TemporaryDirectoryFactory:
     def __init__(
@@ -76,7 +54,7 @@ def save_repertoire_by_immuneml_format(repertoire: Repertoire, dir: Path) -> Pat
     seqs2 = ["A" * len(s) for s in seqs]
     counts = list(repertoire.counts)
     idxs = list(range(len(seqs)))
-    productives = [True for _ in idxs]
+    [True for _ in idxs]
     name = repertoire.sample_id
     df = pd.DataFrame.from_dict(
         {
@@ -115,18 +93,16 @@ def save_repertoires_by_immuneml_format(
     return d
 
 
-
-
 class Repertoire2ImmuneMLDataset:
-    def __init__(
-        self,n_jobs=1
-    ):
+    def __init__(self, n_jobs=1):
         self.temp_dir_factory = TemporaryDirectoryFactory()
         self.n_jobs = n_jobs
 
-    def transform(self,repertoires: List[Repertoire]) -> RepertoireDataset:
-        saved_path = save_repertoires_by_immuneml_format(repertoires, self.temp_dir_factory)
-        print(datetime.datetime.now(),"Loading to ImmumemlRepertoire")
+    def transform(self, repertoires: List[Repertoire]) -> RepertoireDataset:
+        saved_path = save_repertoires_by_immuneml_format(
+            repertoires, self.temp_dir_factory
+        )
+        print(datetime.datetime.now(), "Loading to ImmumemlRepertoire")
         datasets = AIRRImport.AIRRImport.import_dataset(
             {
                 "number_of_processes": self.n_jobs,
@@ -170,9 +146,9 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         self.target_label = target_label
 
     def fit(self, repertoires: List[Repertoire], _: List[bool]):
-        print(datetime.datetime.now(),"Converting to immuneML format...")
+        print(datetime.datetime.now(), "Converting to immuneML format...")
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
-        print(datetime.datetime.now(),"Encoding to k-mer...")
+        print(datetime.datetime.now(), "Encoding to k-mer...")
         self.feature_extractor = AtchleyKmerEncoderImmuneML.build_object(
             datasets,
             **{
@@ -189,21 +165,21 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
             pool_size=12,
         )
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params)
-        print(datetime.datetime.now(),"Training classifier...")
+        print(datetime.datetime.now(), "Training classifier...")
         self.classifier.fit(enc_dataset.encoded_data, self.target_label)
 
     def predict(self, repertoires: List[Repertoire]):
-        print(datetime.datetime.now(),"Converting to immuneML format...")
+        print(datetime.datetime.now(), "Converting to immuneML format...")
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
-        print(datetime.datetime.now(),"Encoding to k-mer...")
+        print(datetime.datetime.now(), "Encoding to k-mer...")
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params)
         return self.classifier.predict(enc_dataset.encoded_data, self.target_label)
 
     def predict_proba(self, repertoires: List[Repertoire]):
-        print(datetime.datetime.now(),"Converting to immuneML format...")
+        print(datetime.datetime.now(), "Converting to immuneML format...")
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
-        print(datetime.datetime.now(),"Encoding to k-mer...")
+        print(datetime.datetime.now(), "Encoding to k-mer...")
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params)
-        return self.classifier.predict_proba(enc_dataset.encoded_data, self.target_label)
-
-
+        return self.classifier.predict_proba(
+            enc_dataset.encoded_data, self.target_label
+        )
