@@ -184,7 +184,7 @@ def ngram(
     seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array, n_gram: int
 ):
     n = len(seq_arrs)
-    arrays = np.zeros((alphabet_size ** n_gram), dtype=np.int64)
+    arrays = np.zeros((alphabet_size**n_gram), dtype=np.int64)
     multiplier = np.array([alphabet_size ** (n_gram - 1 - k) for k in range(n_gram)])
     for p in range(n):
         seq_arr = seq_arrs[p]
@@ -201,14 +201,14 @@ def ngram(
 @numba.jit(nopython=True)
 def trigram(seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array):
     n = len(seq_arrs)
-    arrays = np.zeros((alphabet_size ** 3), dtype=np.int64)
+    arrays = np.zeros((alphabet_size**3), dtype=np.int64)
     for p in range(n):
         seq_arr = seq_arrs[p]
         for q in range(0, len(seq_arr) - 2):
             arrays[
-                seq_arr[q] * alphabet_size ** 2
-                + seq_arr[q + 1] * alphabet_size ** 1
-                + seq_arr[q + 2] * alphabet_size ** 0,
+                seq_arr[q] * alphabet_size**2
+                + seq_arr[q + 1] * alphabet_size**1
+                + seq_arr[q + 2] * alphabet_size**0,
             ] += (
                 1 * count_weights[p]
             )
