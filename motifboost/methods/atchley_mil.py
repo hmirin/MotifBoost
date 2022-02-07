@@ -10,14 +10,16 @@ from typing import List
 import pandas as pd
 from immuneML.data_model.dataset import RepertoireDataset
 from immuneML.data_model.repertoire.Repertoire import Repertoire
-from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
-    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
+from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import (
+    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML,
+)
 from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.environment.Label import Label
 from immuneML.environment.LabelConfiguration import LabelConfiguration
 from immuneML.IO.dataset_import import AIRRImport
-from immuneML.ml_methods.AtchleyKmerMILClassifier import \
-    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
+from immuneML.ml_methods.AtchleyKmerMILClassifier import (
+    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML,
+)
 from sklearn.base import BaseEstimator, ClassifierMixin
 from tqdm import tqdm
 
@@ -29,9 +31,7 @@ from motifboost.repertoire import Repertoire
 
 
 class TemporaryDirectoryFactory:
-    def __init__(
-        self,
-    ):
+    def __init__(self,):
         self.dirs: List[Path] = []
 
     def new(self) -> Path:
@@ -173,7 +173,9 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
         print(datetime.datetime.now(), "Encoding to k-mer...")
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params)
-        return self.classifier.predict(enc_dataset.encoded_data, self.target_label)
+        return self.classifier.predict(enc_dataset.encoded_data, self.target_label)[
+            self.target_label
+        ]
 
     def predict_proba(self, repertoires: List[Repertoire]):
         print(datetime.datetime.now(), "Converting to immuneML format...")
@@ -182,4 +184,4 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params)
         return self.classifier.predict_proba(
             enc_dataset.encoded_data, self.target_label
-        )
+        )[self.target_label][:, 1]
