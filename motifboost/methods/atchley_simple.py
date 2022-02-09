@@ -171,7 +171,7 @@ def repertoire2vector(
     n_subsample: int,
     n_codewords: int,
     n_augmentation=100,
-    n_jobs=1
+    n_jobs=1,
 ):
     wrapper = functools.partial(
         seqs2historgam_wrapper,
@@ -194,7 +194,12 @@ def repertoire2vector(
 
 class AtchleySimpleEncoder(FeatureExtractor):
     def __init__(
-            self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100, n_jobs=1
+        self,
+        n_gram: int,
+        n_subsample: int,
+        n_codewords: int,
+        n_augmentation: int = 100,
+        n_jobs=1,
     ):
         self.codeword2cluster = None
         self.codewords_atchely = None
@@ -212,7 +217,7 @@ class AtchleySimpleEncoder(FeatureExtractor):
                 imap = pool.imap(wrapper, repertoires)
                 result = list(tqdm(imap, total=len(repertoires), desc="Ngram"))
         else:
-            result = [wrapper(x) for x in tqdm(repertoires,desc="Ngram")]
+            result = [wrapper(x) for x in tqdm(repertoires, desc="Ngram")]
         # result = [wrapper(repertoire) for repertoire in tqdm(repertoires,desc="Ngram")]
         codewords = set.union(*result, set())
         codewords_atchely = [atchley_factor(x) for x in codewords]
@@ -229,13 +234,13 @@ class AtchleySimpleEncoder(FeatureExtractor):
     def transform(self, repertoires: List[Repertoire]) -> List[List[np.ndarray]]:
         wrapper = functools.partial(
             repertoire2vector,
-            codewords_atchely = self.codewords_atchely,
-            cluster = self.cluster,
-            n_gram = self.n_gram,
-            n_subsample = self.n_subsample,
-            n_codewords = self.n_codewords,
-            n_augmentation = self.n_augmentation,
-            n_jobs = 1
+            codewords_atchely=self.codewords_atchely,
+            cluster=self.cluster,
+            n_gram=self.n_gram,
+            n_subsample=self.n_subsample,
+            n_codewords=self.n_codewords,
+            n_augmentation=self.n_augmentation,
+            n_jobs=1,
         )
         if self.n_jobs > 1:
             with multiprocessing.Pool(self.n_jobs) as pool:
@@ -245,6 +250,7 @@ class AtchleySimpleEncoder(FeatureExtractor):
             result = [wrapper(r) for r in tqdm(repertoires, desc="Transforming")]
         return result
 
+
 class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
@@ -252,7 +258,7 @@ class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
         n_subsample: int,
         n_codewords: int = 100,
         n_augmentation: int = 100,
-        n_jobs:int =1
+        n_jobs: int = 1,
     ):
         self.n_gram = n_gram
         self.n_subsample = n_subsample

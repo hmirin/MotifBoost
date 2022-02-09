@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from immuneML.environment.Label import Label
 from immuneML.data_model.dataset import RepertoireDataset
 from immuneML.data_model.repertoire.Repertoire import Repertoire
 from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
@@ -42,9 +41,10 @@ class TemporaryDirectoryFactory:
 
     def reset(self):
         import shutil
+
         """delete all directory in dirs"""
         for d in self.dirs:
-            print("deleting...", d )
+            print("deleting...", d)
             shutil.rmtree(d)
         self.dirs = []
 
@@ -166,13 +166,13 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
             pool_size=12,
-            learn_model = True
+            learn_model=True,
         )
         self.encoder_params_predict = EncoderParams(
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
             pool_size=12,
-            learn_model=False
+            learn_model=False,
         )
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
@@ -182,7 +182,9 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         print(datetime.datetime.now(), "Converting to immuneML format...")
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
         print(datetime.datetime.now(), "Encoding to k-mer...")
-        enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_predict)
+        enc_dataset = self.feature_extractor.encode(
+            datasets, self.encoder_params_predict
+        )
         return self.classifier.predict(enc_dataset.encoded_data, self.target_label)[
             self.target_label.name
         ]
@@ -191,7 +193,9 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         print(datetime.datetime.now(), "Converting to immuneML format...")
         saved_path, datasets = self.rep2repdataset.transform(repertoires)
         print(datetime.datetime.now(), "Encoding to k-mer...")
-        enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_predict)
+        enc_dataset = self.feature_extractor.encode(
+            datasets, self.encoder_params_predict
+        )
         return self.classifier.predict_proba(
             enc_dataset.encoded_data, self.target_label
         )[self.target_label.name]
