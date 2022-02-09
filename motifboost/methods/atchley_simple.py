@@ -171,6 +171,7 @@ def repertoire2vector(
     n_subsample: int,
     n_codewords: int,
     n_augmentation=100,
+    n_jobs=1
 ):
     wrapper = functools.partial(
         seqs2historgam_wrapper,
@@ -182,15 +183,18 @@ def repertoire2vector(
         seqs=repertoire.sequences.get_all(),
     )
     repertoire.sequences.get_all()
-    with multiprocessing.Pool(10) as pool:
-        imap = pool.imap(wrapper, range(n_augmentation))
-        result = list(tqdm(imap, total=n_augmentation, desc="Augmentation"))
-        return result
+    if n_jobs > 1:
+        with multiprocessing.Pool(n_jobs) as pool:
+            imap = pool.imap(wrapper, range(n_augmentation))
+            result = list(tqdm(imap, total=n_augmentation, desc="Augmentation"))
+    else:
+        result = [wrapper(x) for x in range(n_augmentation)]
+    return result
 
 
 class AtchleySimpleEncoder(FeatureExtractor):
     def __init__(
-        self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100
+            self, n_gram: int, n_subsample: int, n_codewords: int, n_augmentation: int = 100, n_jobs=1
     ):
         self.codeword2cluster = None
         self.codewords_atchely = None
@@ -198,13 +202,17 @@ class AtchleySimpleEncoder(FeatureExtractor):
         self.n_subsample = n_subsample
         self.n_codewords = n_codewords
         self.n_augmentation = n_augmentation
+        self.n_jobs = n_jobs
 
     def fit(self, repertoires: List[Repertoire]):
         # check codewords
         wrapper = functools.partial(repertoire_to_ngram, ngram=self.n_gram)
-        with multiprocessing.Pool(10) as pool:
-            imap = pool.imap(wrapper, repertoires)
-            result = list(tqdm(imap, total=len(repertoires), desc="Ngram"))
+        if self.n_jobs > 1:
+            with multiprocessing.Pool(self.n_jobs) as pool:
+                imap = pool.imap(wrapper, repertoires)
+                result = list(tqdm(imap, total=len(repertoires), desc="Ngram"))
+        else:
+            result = [wrapper(x) for x in tqdm(repertoires,desc="Ngram")]
         # result = [wrapper(repertoire) for repertoire in tqdm(repertoires,desc="Ngram")]
         codewords = set.union(*result, set())
         codewords_atchely = [atchley_factor(x) for x in codewords]
@@ -219,18 +227,23 @@ class AtchleySimpleEncoder(FeatureExtractor):
         self.codeword2cluster = codeword2cluster
 
     def transform(self, repertoires: List[Repertoire]) -> List[List[np.ndarray]]:
-        return [
-            repertoire2vector(
-                r,
-                self.codewords_atchely,
-                self.cluster,
-                self.n_gram,
-                self.n_subsample,
-                self.n_codewords,
-            )
-            for r in tqdm(repertoires, desc="Transforming")
-        ]
-
+        wrapper = functools.partial(
+            repertoire2vector,
+            codewords_atchely = self.codewords_atchely,
+            cluster = self.cluster,
+            n_gram = self.n_gram,
+            n_subsample = self.n_subsample,
+            n_codewords = self.n_codewords,
+            n_augmentation = self.n_augmentation,
+            n_jobs = 1
+        )
+        if self.n_jobs > 1:
+            with multiprocessing.Pool(self.n_jobs) as pool:
+                imap = pool.imap(wrapper, repertoires)
+                result = list(tqdm(imap, total=len(repertoires), desc="Transforming"))
+        else:
+            result = [wrapper(r) for r in tqdm(repertoires, desc="Transforming")]
+        return result
 
 class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
@@ -239,13 +252,15 @@ class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
         n_subsample: int,
         n_codewords: int = 100,
         n_augmentation: int = 100,
+        n_jobs:int =1
     ):
         self.n_gram = n_gram
         self.n_subsample = n_subsample
         self.n_codewords = n_codewords
         self.n_augmentation = n_augmentation
+        self.n_jobs = n_jobs
         self.feature_extractor = AtchleySimpleEncoder(
-            n_gram, n_subsample, n_codewords, n_augmentation
+            n_gram, n_subsample, n_codewords, n_augmentation, n_jobs
         )
         self.clf = svm.SVC(probability=True)
 
