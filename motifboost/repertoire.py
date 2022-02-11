@@ -120,7 +120,7 @@ def repertoire_dataset_loader(
 
 
 def augment_repertoire(
-    repertoires: List[Repertoire], n: int, method="subsample", subsample_size=0.25
+    repertoires: List[Repertoire], n: int, subsample_size=0.25
 ) -> List[Repertoire]:
     data = []
     idx = 0
@@ -151,7 +151,7 @@ def augment_numba(counts: np.array, subsample_size: float, len_seqs: int):
     cumsum = np.cumsum(weights)
     indices = [
         np.searchsorted(cumsum, np.random.random(), side="right")
-        for x in range(n_seqs_subsampled)
+        for _ in range(n_seqs_subsampled)
     ]
     ret_arr = np.zeros((len_seqs), dtype=numba.int64)
     for i in indices:

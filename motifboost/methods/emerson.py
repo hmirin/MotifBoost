@@ -2,7 +2,12 @@ import logging
 import os
 import sys
 from collections import defaultdict
-from typing import Callable, DefaultDict, Dict, List, Literal, Optional
+
+try:
+    from typing import Callable, DefaultDict, Dict, List, Literal, Optional
+except:
+    from typing import Callable, Dict, List, Optional
+    from typing_extensions import DefaultDict, Literal
 
 import catboost as ctb
 import numpy as np
@@ -61,7 +66,6 @@ class EmersonFeatureExtractor(FeatureExtractor):
                 for b in set(r.sequences.get_all()):
                     neg_d[b] += 1
         keys = list(pos_d.keys() | neg_d.keys())
-        features = []
 
         def fisher_exact_wrapper(key) -> float:
             pos_exist = pos_d[key]
