@@ -4,7 +4,6 @@ except:
     from typing import Dict, List, Optional, Union
     from typing_extensions import Final
 
-
 import numpy as np
 from bitarray import bitarray
 

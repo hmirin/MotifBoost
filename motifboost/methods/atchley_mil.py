@@ -9,16 +9,14 @@ from typing import List
 import pandas as pd
 from immuneML.data_model.dataset import RepertoireDataset
 from immuneML.data_model.repertoire.Repertoire import Repertoire
-from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import (
-    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML,
-)
+from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
+    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
 from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.environment.Label import Label
 from immuneML.environment.LabelConfiguration import LabelConfiguration
 from immuneML.IO.dataset_import import AIRRImport
-from immuneML.ml_methods.AtchleyKmerMILClassifier import (
-    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML,
-)
+from immuneML.ml_methods.AtchleyKmerMILClassifier import \
+    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
 from sklearn.base import BaseEstimator, ClassifierMixin
 from tqdm import tqdm
 
