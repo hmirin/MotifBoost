@@ -152,7 +152,7 @@ seqs2historgam(
 
 
 def seqs2historgam_wrapper(
-    something,
+    _,
     size: int,
     n_gram: int,
     n_subsample: int,

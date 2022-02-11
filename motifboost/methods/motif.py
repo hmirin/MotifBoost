@@ -1,12 +1,16 @@
 import functools
 import logging
 import multiprocessing
-from typing import Any, Final, List, Literal, Optional, Tuple
+
+try:
+    from typing import Any, Final, List, Literal, Optional, Tuple
+except:
+    from typing import Any, List, Optional, Tuple
+    from typing_extensions import Final, Literal
 
 import numba
 import numpy as np
 import optuna.integration.lightgbm as lgb
-# import catboost as ctb
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import KFold
 from tqdm import tqdm
