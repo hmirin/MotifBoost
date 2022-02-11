@@ -7,7 +7,12 @@ import pathlib
 import random
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import cloudpickle
+import pickle
+
+if pickle.HIGHEST_PROTOCOL < 5:
+    import pickle5 as cloudpickle
+else:
+    import cloudpickle
 import numba
 import numpy as np
 import pandas as pd

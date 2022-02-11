@@ -15,6 +15,7 @@ setuptools.setup(
     install_requires=[
         "click",
         "cloudpickle",
+        "pickle5",
         "joblib",
         "mlflow",
         "tqdm",
@@ -28,7 +29,7 @@ setuptools.setup(
         "numpy",
         "bitarray",
         "pyarrow",
-        "catboost",
+        # "catboost",
         "xgboost",
         "optuna",
     ],
