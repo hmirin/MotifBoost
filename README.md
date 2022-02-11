@@ -4,13 +4,15 @@ A library for robust and data-efficient classification of RepSeq data
 
 ## Install
 - Requirements
-  - Python >= 3.8.5
+  - Python >= 3.8
 
 ```
 git clone https://github.com/hmirin/MotifBoost
 cd MotifBoost
 pip install .
 ```
+
+- To use with python3.7, set ``LOKY_PICKLER=pickle5``
 
 ## Usage
 
@@ -63,6 +65,6 @@ clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 }
 ```
 
-## Reproducing the results of the paper
+## Examples / Reproducing the results of the paper
 
 - See [https://github.com/hmirin/motifboost-paper](https://github.com/hmirin/motifboost-paper)
