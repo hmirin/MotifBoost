@@ -129,6 +129,7 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         random_seed=0,
         learning_rate=0.01,
         zero_abundance_weight_init=True,
+        abundance_type = "relative_abundance",
         n_jobs=8,
     ):
         self.feature_extractor = None
@@ -145,6 +146,8 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         self.rep2repdataset = Repertoire2ImmuneMLDataset(n_jobs)
         self.encoder_path = None
         self.target_label = Label(target_label)
+        self.abundance_type = abundance_type
+        self.n_jobs = n_jobs
 
     def fit(self, repertoires: List[Repertoire], _: List[bool]):
         print(datetime.datetime.now(), "Converting to immuneML format...")
@@ -156,21 +159,21 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
                 "k": 4,
                 "skip_first_n_aa": 0,
                 "skip_last_n_aa": 0,
-                "abundance": "relative_abundance",
+                "abundance": self.abundance_type,
                 "normalize_all_features": False,
             },
         )
         self.encoder_params_fit = EncoderParams(
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
-            pool_size=12,
-            learn_model=True,
+            pool_size=self.n_jobs,
+            learn_model = True
         )
         self.encoder_params_predict = EncoderParams(
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
-            pool_size=12,
-            learn_model=False,
+            pool_size=self.n_jobs,
+            learn_model=False
         )
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
