@@ -16,54 +16,15 @@ from tqdm import tqdm
 from motifboost.features import FeatureExtractor
 from motifboost.repertoire import Repertoire
 
-aa = collections.defaultdict(int)
-aa["A"] = 0
-aa["C"] = 1
-aa["D"] = 2
-aa["E"] = 3
-aa["F"] = 4
-aa["G"] = 5
-aa["H"] = 6
-aa["I"] = 7
-aa["K"] = 8
-aa["L"] = 9
-aa["M"] = 10
-aa["N"] = 11
-aa["P"] = 12
-aa["Q"] = 13
-aa["R"] = 14
-aa["S"] = 15
-aa["T"] = 16
-aa["V"] = 17
-aa["W"] = 18
-aa["Y"] = 19
-
+aa = {"A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9, "M": 10, "N": 11, "P": 12,
+      "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19}
 aas = sorted(aa.keys())
 
 
 @numba.jit()
 def atchley_factor(x: str) -> np.ndarray:
-    aa = {}
-    aa["A"] = 0
-    aa["C"] = 1
-    aa["D"] = 2
-    aa["E"] = 3
-    aa["F"] = 4
-    aa["G"] = 5
-    aa["H"] = 6
-    aa["I"] = 7
-    aa["K"] = 8
-    aa["L"] = 9
-    aa["M"] = 10
-    aa["N"] = 11
-    aa["P"] = 12
-    aa["Q"] = 13
-    aa["R"] = 14
-    aa["S"] = 15
-    aa["T"] = 16
-    aa["V"] = 17
-    aa["W"] = 18
-    aa["Y"] = 19
+    aa = {"A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9, "M": 10, "N": 11, "P": 12,
+          "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19}
     lookup = np.array(
         [
             [-0.591, -1.302, -0.733, 1.570, -0.146],
@@ -133,7 +94,6 @@ def seqs2historgam(
             dist = (codewords_atchely - v) ** 2
             dist = np.sum(dist, axis=1)
             ind = np.argmin(dist)
-            cluster[ind]
             histogram[cluster[ind]] += 1
             count += 1
     return histogram
@@ -297,99 +257,3 @@ class AtchleySimpleClassifier(BaseEstimator, ClassifierMixin):
         ]
         pred_proba = self.clf.predict_proba(np.array(features))
         return pred_proba
-
-
-# from dataclasses import dataclass
-# from typing import Callable, Literal, Optional
-
-# from motifboost.repertoire import Repertoire
-
-
-# @dataclass()
-# class DatasetSettings:
-#     experiment_id: str
-#     get_class: Callable[[Repertoire], bool]
-#     filter_by_sample_id: Optional[Callable[[str], bool]]
-#     filter_by_repertoire: Optional[Callable[[Repertoire], bool]]
-#     get_split: Optional[
-#         Callable[[Repertoire], Literal["train", "test", "other"]]
-#     ] = None
-
-
-# def huth_get_class(r: Repertoire) -> bool:
-#     return bool(r.info["cmv"])
-
-
-# def huth_filter_by_sample_id(sample_id: str) -> bool:
-#     return "all" in sample_id
-
-
-# huth_classification = DatasetSettings(
-#     "Huth", huth_get_class, huth_filter_by_sample_id, None
-# )
-
-
-# def heather_get_class(r: Repertoire) -> bool:
-#     return bool(r.info["HIV"])
-
-
-# def heather_filter_by_sample_id_alpha(sample_id: str) -> bool:
-#     return "alpha" in sample_id
-
-
-# def heather_filter_by_sample_id_beta(sample_id: str) -> bool:
-#     return "beta" in sample_id
-
-
-# def heather_filter_by_repertoire(r: Repertoire) -> bool:
-#     return not r.info["treated"]
-
-
-# heather_classification_alpha = DatasetSettings(
-#     "Heather",
-#     heather_get_class,
-#     heather_filter_by_sample_id_alpha,
-#     heather_filter_by_repertoire,
-# )
-
-# heather_classification_beta = DatasetSettings(
-#     "Heather",
-#     heather_get_class,
-#     heather_filter_by_sample_id_beta,
-#     heather_filter_by_repertoire,
-# )
-
-
-# def emerson_get_class(r: Repertoire) -> bool:
-#     return bool(r.info["CMV"])
-
-
-# def emerson_cohort_get_split(r: Repertoire) -> Literal["train", "test", "other"]:
-#     if "HIP" in r.sample_id:
-#         return "train"
-#     elif "Keck" in r.sample_id:
-#         return "test"
-#     else:
-#         print("unknown sample_id:", r.sample_id)
-#         return "other"
-
-
-# emerson_classification_cohort_split = DatasetSettings(
-#     "Emerson", emerson_get_class, None, None, emerson_cohort_get_split,
-# )
-
-
-# repertoires = repertoire_dataset_loader(
-#     "./data/preprocessed/",
-#     "Huth",
-#     huth_classification.filter_by_sample_id,
-#     huth_classification.filter_by_repertoire,
-#     multiprocess_mode=True,
-#     save_memory=True,  # for emerson full
-# )
-
-# sac = AtchleySimpleClassifier(n_gram=3,n_subsample=10000,n_codewords=100,n_augmentation=100)
-# sac.fit(repertoires, [huth_classification.get_class(r) for r in repertoires])
-# from IPython import embed
-
-# embed()

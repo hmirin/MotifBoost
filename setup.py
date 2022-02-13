@@ -20,7 +20,7 @@ setuptools.setup(
         "mlflow",
         "tqdm",
         "lightgbm",
-        "immuneML",
+        "immuneML==2.1.1",
         "pandas",
         "scipy",
         "numba",
