@@ -1,6 +1,5 @@
 # Taken from https://academic.oup.com/bioinformatics/article/30/22/3181/2390867
 
-import collections
 import functools
 import multiprocessing
 import random
@@ -16,15 +15,55 @@ from tqdm import tqdm
 from motifboost.features import FeatureExtractor
 from motifboost.repertoire import Repertoire
 
-aa = {"A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9, "M": 10, "N": 11, "P": 12,
-      "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19}
+aa = {
+    "A": 0,
+    "C": 1,
+    "D": 2,
+    "E": 3,
+    "F": 4,
+    "G": 5,
+    "H": 6,
+    "I": 7,
+    "K": 8,
+    "L": 9,
+    "M": 10,
+    "N": 11,
+    "P": 12,
+    "Q": 13,
+    "R": 14,
+    "S": 15,
+    "T": 16,
+    "V": 17,
+    "W": 18,
+    "Y": 19,
+}
 aas = sorted(aa.keys())
 
 
 @numba.jit()
 def atchley_factor(x: str) -> np.ndarray:
-    aa = {"A": 0, "C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "H": 6, "I": 7, "K": 8, "L": 9, "M": 10, "N": 11, "P": 12,
-          "Q": 13, "R": 14, "S": 15, "T": 16, "V": 17, "W": 18, "Y": 19}
+    aa = {
+        "A": 0,
+        "C": 1,
+        "D": 2,
+        "E": 3,
+        "F": 4,
+        "G": 5,
+        "H": 6,
+        "I": 7,
+        "K": 8,
+        "L": 9,
+        "M": 10,
+        "N": 11,
+        "P": 12,
+        "Q": 13,
+        "R": 14,
+        "S": 15,
+        "T": 16,
+        "V": 17,
+        "W": 18,
+        "Y": 19,
+    }
     lookup = np.array(
         [
             [-0.591, -1.302, -0.733, 1.570, -0.146],
