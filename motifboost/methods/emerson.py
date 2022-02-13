@@ -3,10 +3,10 @@ import sys
 from collections import defaultdict
 
 try:
-    from typing import Callable, DefaultDict, Dict, List, Literal, Optional
+    from typing import Callable, DefaultDict, Dict, List, Optional
 except:
     from typing import Callable, Dict, List, Optional
-    from typing_extensions import DefaultDict, Literal
+    from typing_extensions import DefaultDict
 
 import numpy as np
 from immuneML.data_model.encoded_data.EncodedData import EncodedData
@@ -114,6 +114,7 @@ class EmersonFeatureExtractor(FeatureExtractor):
             labels={"feature": [self.get_class(r) for r in repertoires]},
         )
 
+
 class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
@@ -177,7 +178,7 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
             )
             return roc_auc
         except Exception as e:
-            print(exp[0],exp[2], "is error.")
+            print(exp[0], exp[2], "is error.")
             print(e)
             sys.exit(1)
 

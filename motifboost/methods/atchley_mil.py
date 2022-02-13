@@ -7,19 +7,19 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from immuneML.IO.dataset_import import AIRRImport
 from immuneML.data_model.dataset import RepertoireDataset
-from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
     AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
+from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.environment.Label import Label
 from immuneML.environment.LabelConfiguration import LabelConfiguration
+from immuneML.IO.dataset_import import AIRRImport
 from immuneML.ml_methods.AtchleyKmerMILClassifier import \
     AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
-from motifboost.repertoire import Repertoire
 from sklearn.base import BaseEstimator, ClassifierMixin
 from tqdm import tqdm
 
+from motifboost.repertoire import Repertoire
 
 # from logging import getLogger
 # logger = getLogger(__name__)
