@@ -129,7 +129,7 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         random_seed=0,
         learning_rate=0.01,
         zero_abundance_weight_init=True,
-        abundance_type = "relative_abundance",
+        abundance_type="relative_abundance",
         n_jobs=8,
     ):
         self.feature_extractor = None
@@ -167,13 +167,13 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
             pool_size=self.n_jobs,
-            learn_model = True
+            learn_model=True,
         )
         self.encoder_params_predict = EncoderParams(
             saved_path / "result",
             LabelConfiguration(labels=[self.target_label]),
             pool_size=self.n_jobs,
-            learn_model=False
+            learn_model=False,
         )
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
