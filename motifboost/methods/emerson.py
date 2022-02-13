@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 from collections import defaultdict
 
@@ -9,9 +8,7 @@ except:
     from typing import Callable, Dict, List, Optional
     from typing_extensions import DefaultDict, Literal
 
-import catboost as ctb
 import numpy as np
-import xgboost as xgb
 from immuneML.data_model.encoded_data.EncodedData import EncodedData
 from immuneML.ml_methods.ProbabilisticBinaryClassifier import (
     ProbabilisticBinaryClassifier,
@@ -42,6 +39,8 @@ class EmersonFeatureExtractor(FeatureExtractor):
         save_fisher_results=False,
         save_memory=False,
     ):
+        self.keys = None
+        self.saved_ps = None
         self.feature_sequences: Optional[List[str]] = None
         self.feature_dict: Optional[Dict[str, int]] = None
         self.get_class = get_class
@@ -87,7 +86,7 @@ class EmersonFeatureExtractor(FeatureExtractor):
     def fit_by_th(self, th):
         features = []
         for key, p in tqdm(zip(self.keys, self.saved_ps)):
-            if p < self.th:
+            if p < th:
                 features.append(key)
         self.feature_sequences = features
         self.feature_dict = {f: idx for idx, f in enumerate(self.feature_sequences)}
@@ -115,73 +114,6 @@ class EmersonFeatureExtractor(FeatureExtractor):
             labels={"feature": [self.get_class(r) for r in repertoires]},
         )
 
-
-class EmersonClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(
-        self,
-        get_class: Callable[[Repertoire], bool],
-        alphabets: List[str],
-        th: float,
-        max_iterations: int,
-        update_rate: float,
-        likelihood_threshold: float = None,
-        classifier_mode: Literal["beta", "catboost", "xgboost"] = "beta",
-    ):
-        self.classifier_mode = classifier_mode
-        # xgboost
-        if self.classifier_mode == "beta":
-            self.clf = ProbabilisticBinaryClassifier(
-                max_iterations, update_rate, likelihood_threshold
-            )
-        elif self.classifier_mode == "catboost":
-            task_type = os.environ.get("TASK_TYPE", "GPU")
-            self.clf = ctb.CatBoostClassifier(task_type=task_type, random_state=0)
-        else:
-            self.clf = xgb.XGBClassifier(
-                eval_metric="auc",
-                tree_method="gpu_hist",
-                random_state=0,
-            )
-        self.feature_extractor = EmersonFeatureExtractor(
-            th=th, get_class=get_class, alphabets=alphabets
-        )
-
-    def fit(self, repertoires: List[Repertoire], binary_targets: List[bool]):
-        print("converting data....")
-        self.feature_extractor.fit(repertoires)
-        print("fitting....")
-        if isinstance(self.clf, ProbabilisticBinaryClassifier):
-            enc = self.feature_extractor.transform_for_immuneml(repertoires)
-            self.clf.fit(encoded_data=enc, label_name="feature")
-        else:
-            # self.clf.fit(trigram_arrays, binary_targets)
-            features = self.feature_extractor.transform(repertoires)
-            self.clf.fit(np.array(features), np.array(binary_targets, dtype=np.int64))
-
-    def predict(self, repertoires: List[Repertoire]) -> List[bool]:
-        print("converting data....")
-        if isinstance(self.clf, ProbabilisticBinaryClassifier):
-            enc = self.feature_extractor.transform_for_immuneml(repertoires)
-            pred_class = self.clf.predict(enc, "feature")
-        else:
-            features = self.feature_extractor.transform(repertoires)
-            pred_class = self.clf.predict(np.array(features))
-            # pred_class = self.clf.predict(trigram_arrays)
-            # return [x == "True" for x in pred_class]
-        return pred_class
-
-    def predict_proba(self, repertoires: List[Repertoire]) -> np.ndarray:
-        print("converting data....")
-        features = self.feature_extractor.transform(repertoires)
-        if isinstance(self.clf, ProbabilisticBinaryClassifier):
-            enc = self.feature_extractor.transform_for_immuneml(repertoires)
-            pred_proba = self.clf.predict_proba(enc, "feature")
-        else:
-            pred_proba = self.clf.predict_proba(np.array(features))
-        # return self.clf.predict_proba(trigram_arrays)
-        return pred_proba["feature"]
-
-
 class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
@@ -190,22 +122,18 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
         fisher_test_ths=[0.00005, 0.0005, 0.005, 0.05],
         max_iterations=[1000, 10000],
         update_rates=[0.0001, 0.001, 0.01, 0.1],
-        # fisher_test_ths = [0.00005], #CV=0.88 / Cohort2=0.83
-        # max_iterations = [10000],
-        # update_rates = [0.0001],
         likelihood_thresholds=[None],  # This is optional
         cross_validation_n_split=5,
         multi_process: Optional[int] = None,
     ):
+        self.clf = None
+        self.feature_extractor = None
         self.clfs = []
         for mi in max_iterations:
             for ur in update_rates:
                 for lt in likelihood_thresholds:
                     self.clfs.append(ProbabilisticBinaryClassifier(mi, ur, lt))
-        self.feature_extractors = [
-            EmersonFeatureExtractor(th=th, get_class=get_class, alphabets=alphabets)
-            for th in fisher_test_ths
-        ]
+        self.fisher_test_ths = fisher_test_ths
         self.get_class = get_class
         self.alphabets = alphabets
         self.kfold = StratifiedKFold(
@@ -213,13 +141,13 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
         )
         self.multi_process = multi_process
 
-    # メモリを食うのでこれは分ける
     def concurrent_wrapper(self, exp):
-        fe = exp[0]
+        th = exp[0]
         clf = exp[1]
         split_data = exp[2]
         cv_predicted = []
         cv_ground_truth = []
+        roc_aucs = []
         try:
             for (
                 fitted_fe,
@@ -228,26 +156,28 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
                 validation_repertoires,
                 validation_targets,
             ) in tqdm(split_data, desc="cv"):
-                fitted_fe.fit_by_th(th=fe.th)
+                fitted_fe.fit_by_th(th=th)
                 enc = fitted_fe.transform_for_immuneml(train_repertoires)
                 clf.fit(encoded_data=enc, label_name="feature")
                 enc = fitted_fe.transform_for_immuneml(validation_repertoires)
                 proba = clf.predict_proba(enc, label_name="feature")["feature"]
                 cv_predicted = cv_predicted + list(proba[:, 1])
                 cv_ground_truth = cv_ground_truth + validation_targets
-            fpr, tpr, _ = roc_curve(cv_ground_truth, cv_predicted)
-            roc_auc = auc(fpr, tpr)
+                fpr, tpr, _ = roc_curve(cv_ground_truth, cv_predicted)
+                roc_auc = auc(fpr, tpr)
+                roc_aucs.append(roc_auc)
+            roc_auc = np.mean(roc_aucs)
             print(
                 "roc_auc",
                 roc_auc,
-                exp[0].th,
-                exp[1].max_iterations,
-                exp[1].update_rate,
-                exp[1].likelihood_threshold,
+                th,
+                clf.max_iterations,
+                clf.update_rate,
+                clf.likelihood_threshold,
             )
             return roc_auc
         except Exception as e:
-            print(split_file, "is error.")
+            print(exp[0],exp[2], "is error.")
             print(e)
             sys.exit(1)
 
@@ -301,9 +231,9 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
             ]
         print("trained feature extractors")
         exps = []
-        for fe in self.feature_extractors:
+        for th in self.fisher_test_ths:
             for clf in self.clfs:
-                exps.append((fe, clf, split_data))
+                exps.append((th, clf, split_data))
         print("training classifiers...")
         if multi_process:
             with parallel_backend("loky", n_jobs=multi_process):
@@ -326,18 +256,18 @@ class EmersonClassifierWithParameterSearch(BaseEstimator, ClassifierMixin):
         print(
             "maximum roc_auc",
             roc_auc_max,
-            best_exp[0].th,
+            best_exp[0],
             best_exp[1].max_iterations,
             best_exp[1].update_rate,
             best_exp[1].likelihood_threshold,
         )
-        fe = best_exp[0]
+        th = best_exp[0]
         clf = best_exp[1]
         best_classifier = ProbabilisticBinaryClassifier(
             clf.max_iterations, clf.update_rate, clf.likelihood_threshold
         )
         best_feature_extractor = EmersonFeatureExtractor(
-            th=fe.th, get_class=fe.get_class, alphabets=fe.alphabets
+            th=th, get_class=self.get_class, alphabets=self.alphabets
         )
         best_feature_extractor.fit(repertoires)
         enc = best_feature_extractor.transform_for_immuneml(repertoires)
