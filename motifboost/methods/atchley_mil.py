@@ -16,7 +16,6 @@ from immuneML.environment.LabelConfiguration import LabelConfiguration
 from immuneML.IO.dataset_import import AIRRImport
 from immuneML.ml_methods.AtchleyKmerMILClassifier import \
     AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
-from sklearn.base import BaseEstimator, ClassifierMixin
 from tqdm import tqdm
 
 from motifboost.repertoire import Repertoire
@@ -118,7 +117,6 @@ class Repertoire2ImmuneMLDataset:
         return saved_path, datasets
 
 
-    
 class AtchleyKmerMILClassifier:
     def __init__(
         self,
@@ -183,13 +181,17 @@ class AtchleyKmerMILClassifier:
     def predict(self, repertoires: List[Repertoire]):
         global cached_prediction_encoded_data_key
         global cached_prediction_encoded_data_value
+
         def to_key(repertoires, target_label):
             return "_".join([r.sample_id for r in repertoires] + [target_label])
+
         use_cache = False
         if cached_prediction_encoded_data_key is None:
             pass
         else:
-            if cached_prediction_encoded_data_key == to_key(repertoires,self.target_label.name):
+            if cached_prediction_encoded_data_key == to_key(
+                repertoires, self.target_label.name
+            ):
                 enc_dataset = cached_prediction_encoded_data_value
                 use_cache = True
             else:
@@ -205,11 +207,13 @@ class AtchleyKmerMILClassifier:
             enc_dataset = self.feature_extractor.encode(
                 datasets, self.encoder_params_predict
             )
-            cached_prediction_encoded_data_key  = to_key(repertoires,self.target_label.name)
+            cached_prediction_encoded_data_key = to_key(
+                repertoires, self.target_label.name
+            )
             cached_prediction_encoded_data_value = enc_dataset
-        return self.classifier.predict(enc_dataset.encoded_data, self.target_label.name)[
-            self.target_label.name
-        ]
+        return self.classifier.predict(
+            enc_dataset.encoded_data, self.target_label.name
+        )[self.target_label.name]
 
     def predict_proba(self, repertoires: List[Repertoire]):
         global cached_prediction_encoded_data_key
@@ -217,11 +221,14 @@ class AtchleyKmerMILClassifier:
         # special code for paper
         def to_key(repertoires, target_label):
             return "_".join([r.sample_id for r in repertoires] + [target_label])
+
         use_cache = False
         if cached_prediction_encoded_data_key is None:
             pass
         else:
-            if cached_prediction_encoded_data_key == to_key(repertoires,self.target_label.name):
+            if cached_prediction_encoded_data_key == to_key(
+                repertoires, self.target_label.name
+            ):
                 enc_dataset = cached_prediction_encoded_data_value
                 use_cache = True
             else:
@@ -236,7 +243,9 @@ class AtchleyKmerMILClassifier:
             enc_dataset = self.feature_extractor.encode(
                 datasets, self.encoder_params_predict
             )
-            cached_prediction_encoded_data_key  = to_key(repertoires,self.target_label.name)
+            cached_prediction_encoded_data_key = to_key(
+                repertoires, self.target_label.name
+            )
             cached_prediction_encoded_data_value = enc_dataset
         return self.classifier.predict_proba(
             enc_dataset.encoded_data, self.target_label.name
