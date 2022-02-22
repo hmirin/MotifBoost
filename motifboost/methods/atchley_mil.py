@@ -118,7 +118,8 @@ class Repertoire2ImmuneMLDataset:
         return saved_path, datasets
 
 
-class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
+    
+class AtchleyKmerMILClassifier:
     def __init__(
         self,
         target_label,
@@ -177,26 +178,70 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         )
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
-        self.classifier.fit(enc_dataset.encoded_data, self.target_label)
+        self.classifier.fit(enc_dataset.encoded_data, self.target_label.name)
 
     def predict(self, repertoires: List[Repertoire]):
-        print(datetime.datetime.now(), "Converting to immuneML format...")
-        saved_path, datasets = self.rep2repdataset.transform(repertoires)
-        print(datetime.datetime.now(), "Encoding to k-mer...")
-        enc_dataset = self.feature_extractor.encode(
-            datasets, self.encoder_params_predict
-        )
-        return self.classifier.predict(enc_dataset.encoded_data, self.target_label)[
+        global cached_prediction_encoded_data_key
+        global cached_prediction_encoded_data_value
+        def to_key(repertoires, target_label):
+            return "_".join([r.sample_id for r in repertoires] + [target_label])
+        use_cache = False
+        if cached_prediction_encoded_data_key is None:
+            pass
+        else:
+            if cached_prediction_encoded_data_key == to_key(repertoires,self.target_label.name):
+                enc_dataset = cached_prediction_encoded_data_value
+                use_cache = True
+            else:
+                pass
+
+        if use_cache:
+            print("Cache hit!")
+        else:
+            print(datetime.datetime.now(), "Converting to immuneML format...")
+            saved_path, datasets = self.rep2repdataset.transform(repertoires)
+            print(datetime.datetime.now(), "Encoding to k-mer...")
+            # special code for paper
+            enc_dataset = self.feature_extractor.encode(
+                datasets, self.encoder_params_predict
+            )
+            cached_prediction_encoded_data_key  = to_key(repertoires,self.target_label.name)
+            cached_prediction_encoded_data_value = enc_dataset
+        return self.classifier.predict(enc_dataset.encoded_data, self.target_label.name)[
             self.target_label.name
         ]
 
     def predict_proba(self, repertoires: List[Repertoire]):
-        print(datetime.datetime.now(), "Converting to immuneML format...")
-        saved_path, datasets = self.rep2repdataset.transform(repertoires)
-        print(datetime.datetime.now(), "Encoding to k-mer...")
-        enc_dataset = self.feature_extractor.encode(
-            datasets, self.encoder_params_predict
-        )
+        global cached_prediction_encoded_data_key
+        global cached_prediction_encoded_data_value
+        # special code for paper
+        def to_key(repertoires, target_label):
+            return "_".join([r.sample_id for r in repertoires] + [target_label])
+        use_cache = False
+        if cached_prediction_encoded_data_key is None:
+            pass
+        else:
+            if cached_prediction_encoded_data_key == to_key(repertoires,self.target_label.name):
+                enc_dataset = cached_prediction_encoded_data_value
+                use_cache = True
+            else:
+                pass
+
+        if use_cache:
+            print("Cache hit!")
+        else:
+            print(datetime.datetime.now(), "Converting to immuneML format...")
+            saved_path, datasets = self.rep2repdataset.transform(repertoires)
+            print(datetime.datetime.now(), "Encoding to k-mer...")
+            enc_dataset = self.feature_extractor.encode(
+                datasets, self.encoder_params_predict
+            )
+            cached_prediction_encoded_data_key  = to_key(repertoires,self.target_label.name)
+            cached_prediction_encoded_data_value = enc_dataset
         return self.classifier.predict_proba(
-            enc_dataset.encoded_data, self.target_label
+            enc_dataset.encoded_data, self.target_label.name
         )[self.target_label.name]
+
+
+cached_prediction_encoded_data_key = None
+cached_prediction_encoded_data_value = None
