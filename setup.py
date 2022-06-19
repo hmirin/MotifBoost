@@ -21,11 +21,11 @@ setuptools.setup(
         "tqdm",
         "lightgbm",
         "h5py==3.7.0",
-        "immuneML==2.1.1", # depends on h5py
+        "immuneML==2.1.1",  # depends on h5py
         "pandas",
         "scipy",
         "numba",
-        "numba-scipy", # depends on scipy == 1.6.2, which doesn't work on M1 Mac
+        "numba-scipy",  # depends on scipy == 1.6.2, which doesn't work on M1 Mac
         "scipy==1.6.2",
         "numpy",
         "bitarray",

@@ -12,10 +12,10 @@ except:
     from typing import Any, List, Optional, Tuple
     from typing_extensions import Final, Literal
 
+import lightgbm as lgb
 import numba
 import numpy as np
 import optuna.integration.lightgbm as lgb_optuna
-import lightgbm as lgb
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import KFold
 from tqdm import tqdm
@@ -42,7 +42,7 @@ class MotifFeatureExtractor(FeatureExtractor):
         self.count_weight_mode = count_weight_mode
         self.tfidf_mode = tfidf_mode
         if n_processes is None:
-            n_processes = int(multiprocessing.cpu_count()/2)
+            n_processes = int(multiprocessing.cpu_count() / 2)
         self.n_processes: int = n_processes
         self.idf = None
         self.ngram_range = ngram_range
@@ -193,7 +193,7 @@ def ngram(
     seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array, n_gram: int
 ):
     n = len(seq_arrs)
-    arrays = np.zeros((alphabet_size ** n_gram), dtype=np.int64)
+    arrays = np.zeros((alphabet_size**n_gram), dtype=np.int64)
     multiplier = np.array([alphabet_size ** (n_gram - 1 - k) for k in range(n_gram)])
     for p in range(n):
         seq_arr = seq_arrs[p]
@@ -210,14 +210,14 @@ def ngram(
 @numba.jit(nopython=True)
 def trigram(seq_arrs: List[np.array], alphabet_size: int, count_weights: np.array):
     n = len(seq_arrs)
-    arrays = np.zeros((alphabet_size ** 3), dtype=np.int64)
+    arrays = np.zeros((alphabet_size**3), dtype=np.int64)
     for p in range(n):
         seq_arr = seq_arrs[p]
         for q in range(0, len(seq_arr) - 2):
             arrays[
-                seq_arr[q] * alphabet_size ** 2
-                + seq_arr[q + 1] * alphabet_size ** 1
-                + seq_arr[q + 2] * alphabet_size ** 0,
+                seq_arr[q] * alphabet_size**2
+                + seq_arr[q + 1] * alphabet_size**1
+                + seq_arr[q + 2] * alphabet_size**0,
             ] += (
                 1 * count_weights[p]
             )
@@ -237,11 +237,11 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
         augmentation_rate: Optional[float] = 0.5,
         ngram_range: Optional[Tuple[int, int]] = (3, 4),
         classifier_method: Literal["optuna-lightgbm"] = "optuna-lightgbm",
-        n_jobs: Optional[int] = None
+        n_jobs: Optional[int] = None,
     ):
         self.classifier_method = classifier_method
         # lightGBM w/ Optuna
-        if self.classifier_method in ["optuna-lightgbm","lightgbm"]:
+        if self.classifier_method in ["optuna-lightgbm", "lightgbm"]:
             self.clf = None
         elif self.classifier_method == "linear_regression":
             self.clf = LogisticRegression()
@@ -253,10 +253,10 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
         if n_jobs:
             self.n_jobs = n_jobs
         else:
-            if platform.machine() =="arm64":
+            if platform.machine() == "arm64":
                 self.n_jobs = multiprocessing.cpu_count()
             else:
-                self.n_jobs = int(multiprocessing.cpu_count()/2)
+                self.n_jobs = int(multiprocessing.cpu_count() / 2)
 
         self.feature_extractor = MotifFeatureExtractor(
             alphabets=alphabets,
@@ -285,7 +285,7 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             print("augmted samples length", len(binary_targets))
         trigram_arrays = self.feature_extractor.fit(repertoires)
         print("fitting....")
-        if self.classifier_method  in ["optuna-lightgbm","lightgbm"]:
+        if self.classifier_method in ["optuna-lightgbm", "lightgbm"]:
             dtrain = lgb_optuna.Dataset(
                 np.array(trigram_arrays), label=np.array(binary_targets, dtype=np.int64)
             )
@@ -294,7 +294,7 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
                 "metric": "binary_logloss",
                 "verbosity": -1,
                 "boosting_type": "gbdt",
-                "num_threads": self.n_jobs
+                "num_threads": self.n_jobs,
             }
             if self.classifier_method == "optuna-lightgbm":
                 tuner = lgb_optuna.LightGBMTunerCV(
@@ -318,7 +318,9 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
                 self.clf = tuner.get_best_booster()
             else:
                 self.clf = lgb.LGBMClassifier(**params)
-                self.clf.fit(np.array(trigram_arrays),np.array(binary_targets, dtype=np.int64))
+                self.clf.fit(
+                    np.array(trigram_arrays), np.array(binary_targets, dtype=np.int64)
+                )
         else:
             self.clf.fit(np.array(trigram_arrays), np.array(binary_targets))
 
