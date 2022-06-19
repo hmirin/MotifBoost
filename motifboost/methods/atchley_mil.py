@@ -2,20 +2,24 @@
 import datetime
 import functools
 import multiprocessing
+from multiprocessing import get_context
 import tempfile
 from pathlib import Path
 from typing import List
+import atexit
 
 import pandas as pd
 from immuneML.data_model.dataset import RepertoireDataset
-from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
-    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
+from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import (
+    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML,
+)
 from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.environment.Label import Label
 from immuneML.environment.LabelConfiguration import LabelConfiguration
 from immuneML.IO.dataset_import import AIRRImport
-from immuneML.ml_methods.AtchleyKmerMILClassifier import \
-    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML
+from immuneML.ml_methods.AtchleyKmerMILClassifier import (
+    AtchleyKmerMILClassifier as AtchleyKmerMILClassifierImmuneML,
+)
 from sklearn.base import BaseEstimator, ClassifierMixin
 from tqdm import tqdm
 
@@ -36,11 +40,13 @@ class TemporaryDirectoryFactory:
         d = Path(tempfile.mkdtemp())
         print("new temp dir created:", d)
         self.dirs.append(d)
+        atexit.register(self.reset)
         return d
 
     def reset(self):
         import shutil
 
+        print('Deleting temporary directory...')
         """delete all directory in dirs"""
         for d in self.dirs:
             print("deleting...", d)
@@ -76,7 +82,7 @@ def save_repertoires_by_immuneml_format(
     d = directory.new()
     wrapper = functools.partial(save_repertoire_by_immuneml_format, dir=d)
     if n_jobs > 1:
-        with multiprocessing.Pool(n_jobs) as pool:
+        with get_context("fork").Pool(n_jobs) as pool:
             imap = pool.imap(wrapper, repertoires)
             paths = list(tqdm(imap, total=len(repertoires), desc="Converting"))
     else:
@@ -175,9 +181,11 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
             pool_size=self.n_jobs,
             learn_model=False,
         )
+        # The next line takes long time.
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
-        self.classifier.fit(enc_dataset.encoded_data, self.target_label)
+        # v2.2.1 takes string for this label
+        self.classifier.fit(enc_dataset.encoded_data, self.target_label.name)
 
     def predict(self, repertoires: List[Repertoire]):
         print(datetime.datetime.now(), "Converting to immuneML format...")
@@ -186,7 +194,7 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
         enc_dataset = self.feature_extractor.encode(
             datasets, self.encoder_params_predict
         )
-        return self.classifier.predict(enc_dataset.encoded_data, self.target_label)[
+        return self.classifier.predict(enc_dataset.encoded_data, self.target_label.name)[
             self.target_label.name
         ]
 
@@ -198,5 +206,5 @@ class AtchleyKmerMILClassifier(BaseEstimator, ClassifierMixin):
             datasets, self.encoder_params_predict
         )
         return self.classifier.predict_proba(
-            enc_dataset.encoded_data, self.target_label
+            enc_dataset.encoded_data, self.target_label.name
         )[self.target_label.name]

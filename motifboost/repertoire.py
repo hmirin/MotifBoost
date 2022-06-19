@@ -2,6 +2,7 @@ import copy
 import functools
 import glob
 import multiprocessing
+from multiprocessing import get_context
 import os
 import pathlib
 import pickle
@@ -104,7 +105,7 @@ def repertoire_dataset_loader(
         random.shuffle(sample_ids)
         sample_ids = sample_ids[:skip_after]
     if multiprocess_mode:
-        with multiprocessing.Pool(n_processes) as pool:
+        with get_context("fork").Pool(n_processes) as pool:
             imap = pool.imap(wrapper, sample_ids)
             results = list(
                 tqdm(imap, total=len(sample_ids), desc="RepertoireLoader_Multi")
