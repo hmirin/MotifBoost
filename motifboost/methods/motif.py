@@ -1,6 +1,10 @@
 import functools
 import logging
 import multiprocessing
+from multiprocessing import get_context
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 
 try:
     from typing import Any, Final, List, Literal, Optional, Tuple
@@ -8,9 +12,10 @@ except:
     from typing import Any, List, Optional, Tuple
     from typing_extensions import Final, Literal
 
+import lightgbm as lgb
 import numba
 import numpy as np
-import optuna.integration.lightgbm as lgb
+import optuna.integration.lightgbm as lgb_optuna
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import KFold
 from tqdm import tqdm
@@ -37,7 +42,7 @@ class MotifFeatureExtractor(FeatureExtractor):
         self.count_weight_mode = count_weight_mode
         self.tfidf_mode = tfidf_mode
         if n_processes is None:
-            n_processes = multiprocessing.cpu_count()
+            n_processes = int(multiprocessing.cpu_count() / 2)
         self.n_processes: int = n_processes
         self.idf = None
         self.ngram_range = ngram_range
@@ -46,7 +51,7 @@ class MotifFeatureExtractor(FeatureExtractor):
         wrapper = functools.partial(
             self._process_single, use_cache=use_cache, save_cache=save_cache, mode="fit"
         )
-        with multiprocessing.Pool(self.n_processes) as pool:
+        with get_context("fork").Pool(self.n_processes) as pool:
             imap = pool.imap(wrapper, repertoires)
             result = list(
                 tqdm(imap, total=len(repertoires), desc="MotifFeatureExtractor")
@@ -68,7 +73,7 @@ class MotifFeatureExtractor(FeatureExtractor):
             save_cache=save_cache,
             mode="transform",
         )
-        with multiprocessing.Pool(self.n_processes) as pool:
+        with get_context("fork").Pool(self.n_processes) as pool:
             imap = pool.imap(wrapper, repertoires)
             return list(
                 tqdm(imap, total=len(repertoires), desc="MotifFeatureExtractor")
@@ -232,17 +237,31 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
         augmentation_rate: Optional[float] = 0.5,
         ngram_range: Optional[Tuple[int, int]] = (3, 4),
         classifier_method: Literal["optuna-lightgbm"] = "optuna-lightgbm",
+        n_jobs: Optional[int] = None,
     ):
         self.classifier_method = classifier_method
         # lightGBM w/ Optuna
-        if self.classifier_method == "optuna-lightgbm":
+        if self.classifier_method in ["optuna-lightgbm", "lightgbm"]:
             self.clf = None
+        elif self.classifier_method == "linear_regression":
+            self.clf = LogisticRegression()
+        elif self.classifier_method == "svm":
+            self.clf = SVC(probability=True)
         else:
             raise ValueError("No such clssifiermethod is available:", classifier_method)
+
+        if n_jobs:
+            self.n_jobs = n_jobs
+        else:
+            if platform.machine() == "arm64":
+                self.n_jobs = multiprocessing.cpu_count()
+            else:
+                self.n_jobs = int(multiprocessing.cpu_count() / 2)
 
         self.feature_extractor = MotifFeatureExtractor(
             alphabets=alphabets,
             void_mark=void_mark,
+            n_processes=self.n_jobs,
             count_weight_mode=count_weight_mode,
             tfidf_mode=tfidf_mode,
             ngram_range=ngram_range,
@@ -266,8 +285,8 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             print("augmted samples length", len(binary_targets))
         trigram_arrays = self.feature_extractor.fit(repertoires)
         print("fitting....")
-        if self.classifier_method == "optuna-lightgbm":
-            dtrain = lgb.Dataset(
+        if self.classifier_method in ["optuna-lightgbm", "lightgbm"]:
+            dtrain = lgb_optuna.Dataset(
                 np.array(trigram_arrays), label=np.array(binary_targets, dtype=np.int64)
             )
             params = {
@@ -275,31 +294,35 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
                 "metric": "binary_logloss",
                 "verbosity": -1,
                 "boosting_type": "gbdt",
-                "num_threads": int(multiprocessing.cpu_count() / 2),
+                "num_threads": self.n_jobs,
             }
-            tuner = lgb.LightGBMTunerCV(
-                params,
-                dtrain,
-                verbose_eval=100,
-                early_stopping_rounds=100,
-                folds=KFold(n_splits=3),
-                return_cvbooster=True,
-                optuna_seed=0,
-            )
+            if self.classifier_method == "optuna-lightgbm":
+                tuner = lgb_optuna.LightGBMTunerCV(
+                    params,
+                    dtrain,
+                    verbose_eval=100,
+                    early_stopping_rounds=100,
+                    folds=KFold(n_splits=3),
+                    return_cvbooster=True,
+                    optuna_seed=0,
+                )
 
-            tuner.run()
+                tuner.run()
 
-            print("Best score:", tuner.best_score)
-            best_params = tuner.best_params
-            print("Best params:", best_params)
-            print("  Params: ")
-            for key, value in best_params.items():
-                print("    {}: {}".format(key, value))
-            self.clf = tuner.get_best_booster()
+                print("Best score:", tuner.best_score)
+                best_params = tuner.best_params
+                print("Best params:", best_params)
+                print("  Params: ")
+                for key, value in best_params.items():
+                    print("    {}: {}".format(key, value))
+                self.clf = tuner.get_best_booster()
+            else:
+                self.clf = lgb.LGBMClassifier(**params)
+                self.clf.fit(
+                    np.array(trigram_arrays), np.array(binary_targets, dtype=np.int64)
+                )
         else:
-            raise ValueError(
-                "No such clssifiermethod is available:", self.classifier_method
-            )
+            self.clf.fit(np.array(trigram_arrays), np.array(binary_targets))
 
     def predict(self, repertoires: List[Repertoire]) -> List[bool]:
         print("converting data....")
@@ -316,9 +339,7 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             means = np.mean(preds, axis=0)
             return [x > 0.5 for x in means]
         else:
-            raise ValueError(
-                "No such clssifiermethod is available:", self.classifier_method
-            )
+            self.predict(np.array(trigram_arrays))
 
     def predict_proba(self, repertoires: List[Repertoire]) -> np.ndarray:
         print("converting data....")
@@ -333,7 +354,5 @@ class MotifBoostClassifier(BaseEstimator, ClassifierMixin):
             )
             means = np.mean(preds, axis=0)
             return np.array([1 - means, means]).transpose()
-        elif self.classifier_method == "xgboost":
-            return self.clf.predict_proba(np.array(trigram_arrays))
-        elif self.classifier_method == "svm":
+        else:
             return self.clf.predict_proba(np.array(trigram_arrays))

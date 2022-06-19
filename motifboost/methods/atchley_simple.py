@@ -1,8 +1,8 @@
 # Taken from https://academic.oup.com/bioinformatics/article/30/22/3181/2390867
 
 import functools
-import multiprocessing
 import random
+from multiprocessing import get_context
 from typing import List, Set
 
 import numba
@@ -183,7 +183,7 @@ def repertoire2vector(
     )
     repertoire.sequences.get_all()
     if n_jobs > 1:
-        with multiprocessing.Pool(n_jobs) as pool:
+        with get_context("fork").Pool(n_jobs) as pool:
             imap = pool.imap(wrapper, range(n_augmentation))
             result = list(tqdm(imap, total=n_augmentation, desc="Augmentation"))
     else:
@@ -212,7 +212,7 @@ class AtchleySimpleEncoder(FeatureExtractor):
         # check codewords
         wrapper = functools.partial(repertoire_to_ngram, ngram=self.n_gram)
         if self.n_jobs > 1:
-            with multiprocessing.Pool(self.n_jobs) as pool:
+            with get_context("fork").Pool(self.n_jobs) as pool:
                 imap = pool.imap(wrapper, repertoires)
                 result = list(tqdm(imap, total=len(repertoires), desc="Ngram"))
         else:
@@ -242,7 +242,7 @@ class AtchleySimpleEncoder(FeatureExtractor):
             n_jobs=1,
         )
         if self.n_jobs > 1:
-            with multiprocessing.Pool(self.n_jobs) as pool:
+            with get_context("fork").Pool(self.n_jobs) as pool:
                 imap = pool.imap(wrapper, repertoires)
                 result = list(tqdm(imap, total=len(repertoires), desc="Transforming"))
         else:
