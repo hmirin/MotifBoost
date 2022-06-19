@@ -1,8 +1,9 @@
 # https://cancerres.aacrjournals.org/content/79/7/1671.long
+import atexit
 import datetime
 import functools
-import multiprocessing
 import tempfile
+from multiprocessing import get_context
 from pathlib import Path
 from typing import List
 
@@ -35,11 +36,13 @@ class TemporaryDirectoryFactory:
         d = Path(tempfile.mkdtemp())
         print("new temp dir created:", d)
         self.dirs.append(d)
+        atexit.register(self.reset)
         return d
 
     def reset(self):
         import shutil
 
+        print("Deleting temporary directory...")
         """delete all directory in dirs"""
         for d in self.dirs:
             print("deleting...", d)
@@ -75,7 +78,7 @@ def save_repertoires_by_immuneml_format(
     d = directory.new()
     wrapper = functools.partial(save_repertoire_by_immuneml_format, dir=d)
     if n_jobs > 1:
-        with multiprocessing.Pool(n_jobs) as pool:
+        with get_context("fork").Pool(n_jobs) as pool:
             imap = pool.imap(wrapper, repertoires)
             paths = list(tqdm(imap, total=len(repertoires), desc="Converting"))
     else:
@@ -174,6 +177,7 @@ class AtchleyKmerMILClassifier:
             pool_size=self.n_jobs,
             learn_model=False,
         )
+        # The next line takes long time.
         enc_dataset = self.feature_extractor.encode(datasets, self.encoder_params_fit)
         print(datetime.datetime.now(), "Training classifier...")
         self.classifier.fit(enc_dataset.encoded_data, self.target_label.name)

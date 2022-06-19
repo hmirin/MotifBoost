@@ -14,6 +14,14 @@ pip install .
 
 - To use with python3.7, set ``LOKY_PICKLER=pickle5``
 
+- To run on M1 Mac (2022 Jun.)
+  - Remove ``immuneML==2.1.1`` and ``numba-scipy`` ``scipy==1.6.2`` from setup.py
+  - Install ``immuneML==2.1.1`` from source
+    - Remove ``h5py`` from setup.py
+  - Install ``numba-scipy`` from git repository
+    - Remove ``scipy==1.6.2`` from setup.py in this repository
+    - ``scipy==1.7.3`` will be used
+
 ## Usage
 
 - This library provides an easy interface for repertoire classification problem: 
