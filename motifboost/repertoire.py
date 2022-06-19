@@ -182,3 +182,24 @@ def augment_simple(subsample_size: float, r: Repertoire) -> Repertoire:
         alphabets=r.alphabets,
         save_memory=r.save_memory,
     )
+
+
+from random import randint
+from uuid import uuid4
+
+
+def random_repertoire_generator():
+    info = {"target": bool(randint(0, 1))}
+    if info["target"]:
+        seqs = ["AAAAAA", "CCCCC"]
+        counts = [1, 1]
+    else:
+        seqs = ["TTTTT", "EEEEE"]
+        counts = [1, 1]
+    return Repertoire(
+        experiment_id="random",
+        sample_id=str(uuid4()),
+        info=info,
+        sequences=seqs,
+        counts=counts,
+    )
