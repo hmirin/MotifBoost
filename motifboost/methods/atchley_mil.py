@@ -1,18 +1,16 @@
 # https://cancerres.aacrjournals.org/content/79/7/1671.long
+import atexit
 import datetime
 import functools
-import multiprocessing
-from multiprocessing import get_context
 import tempfile
+from multiprocessing import get_context
 from pathlib import Path
 from typing import List
-import atexit
 
 import pandas as pd
 from immuneML.data_model.dataset import RepertoireDataset
-from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import (
-    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML,
-)
+from immuneML.encodings.atchley_kmer_encoding.AtchleyKmerEncoder import \
+    AtchleyKmerEncoder as AtchleyKmerEncoderImmuneML
 from immuneML.encodings.EncoderParams import EncoderParams
 from immuneML.environment.Label import Label
 from immuneML.environment.LabelConfiguration import LabelConfiguration
@@ -44,7 +42,7 @@ class TemporaryDirectoryFactory:
     def reset(self):
         import shutil
 
-        print('Deleting temporary directory...')
+        print("Deleting temporary directory...")
         """delete all directory in dirs"""
         for d in self.dirs:
             print("deleting...", d)

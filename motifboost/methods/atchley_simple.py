@@ -1,9 +1,8 @@
 # Taken from https://academic.oup.com/bioinformatics/article/30/22/3181/2390867
 
 import functools
-import multiprocessing
-from multiprocessing import get_context
 import random
+from multiprocessing import get_context
 from typing import List, Set
 
 import numba
