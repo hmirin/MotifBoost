@@ -60,16 +60,16 @@ clf.predict_proba(val_repertoires, [get_class(x) for x in val_repertoires])
 
 ## Citation
 
+See [our paper](https://www.frontiersin.org/articles/10.3389/fimmu.2022.797640/full)
+
 ```
-@article {MotifBoost,
-	author = {Katayama, Yotaro and Kobayashi, Tetsuya J.},
-	title = {MotifBoost: k-mer based data-efficient immune repertoire classification method},
-	elocation-id = {2021.09.28.462258},
-	year = {2021},
-	doi = {10.1101/2021.09.28.462258},
-	URL = {https://www.biorxiv.org/content/early/2021/10/01/2021.09.28.462258},
-	eprint = {https://www.biorxiv.org/content/early/2021/10/01/2021.09.28.462258.full.pdf},
-	journal = {bioRxiv}
+@article{10.3389/fimmu.2022.797640,
+author={Katayama, Yotaro and Kobayashi, Tetsuya J.},   	 
+title={Comparative Study of Repertoire Classification Methods Reveals Data Efficiency of k-mer Feature Extraction},      
+journal={Frontiers in Immunology},      	
+volume={13},          
+year={2022}, 	  
+doi={10.3389/fimmu.2022.797640},      
 }
 ```
 
